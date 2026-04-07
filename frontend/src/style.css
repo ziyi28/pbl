@@ -1,0 +1,25 @@
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  color: #213547;
+  background-color: #f5f7fa;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+}
+
+a {
+  color: #409eff;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #66b1ff;
+}
