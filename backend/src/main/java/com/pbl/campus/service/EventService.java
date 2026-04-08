@@ -113,8 +113,7 @@ public class EventService {
         if (event == null || event.getIsDeleted()) {
             return Result.error(404, "活动不存在");
         }
-        event.setIsDeleted(true);
-        eventMapper.updateById(event);
+        eventMapper.deleteById(id);
         return Result.success("活动已删除", null);
     }
 

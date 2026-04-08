@@ -2,7 +2,11 @@
   <div id="app">
     <Navbar />
     <main class="main-container">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="fade-transform" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </main>
   </div>
 </template>
@@ -22,10 +26,35 @@ onMounted(() => {
 </script>
 
 <style scoped>
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
 .main-container {
   max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
-  padding: 20px;
-  min-height: calc(100vh - 60px);
+  /* Add padding-top to account for the fixed glass navbar (60px + 30px spacing) */
+  padding: 100px 20px 40px;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* Route Transition Animations */
+.fade-transform-leave-active,
+.fade-transform-enter-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-transform-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.fade-transform-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
 }
 </style>

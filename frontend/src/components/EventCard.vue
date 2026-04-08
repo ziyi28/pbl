@@ -1,25 +1,30 @@
 <template>
-  <el-card shadow="hover" class="event-card" @click="$router.push(`/events/${event.id}`)">
-    <div class="card-cover" v-if="event.coverImage">
-      <img :src="event.coverImage" :alt="event.title" />
+  <el-card shadow="never" class="event-card glass-effect" @click="$router.push(`/events/${event.id}`)" :body-style="{ padding: '0px' }">
+    <div class="card-cover-wrapper">
+      <div class="card-cover" v-if="event.coverImage">
+        <img :src="event.coverImage" :alt="event.title" />
+      </div>
+      <div class="card-cover placeholder" v-else>
+        <el-icon :size="40"><Calendar /></el-icon>
+      </div>
+      <!-- Floating status badge over image -->
+      <el-tag class="status-badge" :type="statusType" effect="dark" size="small">{{ StatusMap[event.status] }}</el-tag>
     </div>
-    <div class="card-cover placeholder" v-else>
-      <el-icon :size="40"><Calendar /></el-icon>
-    </div>
+    
     <div class="card-body">
       <div class="card-header">
         <h3 class="card-title">{{ event.title }}</h3>
-        <el-tag :type="statusType" size="small">{{ StatusMap[event.status] }}</el-tag>
       </div>
       <div class="card-meta">
         <span><el-icon><Location /></el-icon> {{ event.location }}</span>
         <span><el-icon><Clock /></el-icon> {{ formatDate(event.startTime) }}</span>
       </div>
       <div class="card-footer">
-        <el-tag size="small" effect="plain">{{ CategoryMap[event.category] }}</el-tag>
-        <span class="participants">
-          {{ event.currentParticipants }} / {{ event.maxParticipants }} 人
-        </span>
+        <el-tag size="small" effect="light" class="category-tag">{{ CategoryMap[event.category] }}</el-tag>
+        <div class="participants-info">
+          <el-icon><User /></el-icon>
+          <span>{{ event.currentParticipants }} / {{ event.maxParticipants }}</span>
+        </div>
       </div>
     </div>
   </el-card>
@@ -27,6 +32,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Location, Clock, Calendar, User } from '@element-plus/icons-vue'
 import type { EventItem } from '../types'
 import { CategoryMap, StatusMap } from '../types'
 
@@ -51,73 +57,124 @@ function formatDate(dateStr: string) {
 <style scoped>
 .event-card {
   cursor: pointer;
-  transition: transform 0.2s;
+  border-radius: var(--radius-md) !important;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
 }
 
 .event-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.event-card:hover .card-cover img {
+  transform: scale(1.08);
+}
+
+.card-cover-wrapper {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
 }
 
 .card-cover {
-  height: 160px;
-  overflow: hidden;
-  border-radius: 4px;
-  margin-bottom: 12px;
+  width: 100%;
+  height: 100%;
 }
 
 .card-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .card-cover.placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* Beautiful animated gradient for fallback */
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
   color: #fff;
 }
 
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.status-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.card-body {
+  padding: 20px;
+}
+
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .card-title {
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--c-text);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  margin-right: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
 }
 
 .card-meta {
-  color: #909399;
+  color: var(--c-text-light);
   font-size: 13px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .card-meta span {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
 }
 
-.participants {
-  font-size: 13px;
-  color: #606266;
+.category-tag {
+  border-radius: 12px;
+  padding: 0 12px;
+}
+
+.participants-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-primary);
+  background: rgba(118, 75, 162, 0.08);
+  padding: 4px 10px;
+  border-radius: 12px;
 }
 </style>

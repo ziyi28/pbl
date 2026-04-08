@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken } from '../utils/auth'
+import { getToken, getStoredUser } from '../utils/auth'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -23,12 +23,6 @@ const router = createRouter({
       meta: { title: '注册', guest: true },
     },
     {
-      path: '/events/:id',
-      name: 'EventDetail',
-      component: () => import('../views/EventDetail.vue'),
-      meta: { title: '活动详情' },
-    },
-    {
       path: '/events/create',
       name: 'EventCreate',
       component: () => import('../views/EventCreate.vue'),
@@ -39,6 +33,12 @@ const router = createRouter({
       name: 'EventEdit',
       component: () => import('../views/EventEdit.vue'),
       meta: { title: '编辑活动', requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/events/:id',
+      name: 'EventDetail',
+      component: () => import('../views/EventDetail.vue'),
+      meta: { title: '活动详情' },
     },
     {
       path: '/profile',
@@ -60,6 +60,14 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
+  if (to.meta.requiresAdmin) {
+    const user = getStoredUser()
+    if (user?.role !== 'ADMIN') {
+      next({ name: 'Home' })
+      return
+    }
+  }
+
   if (to.meta.guest && token) {
     next({ name: 'Home' })
     return
@@ -69,3 +77,4 @@ router.beforeEach((to, _from, next) => {
 })
 
 export default router
+

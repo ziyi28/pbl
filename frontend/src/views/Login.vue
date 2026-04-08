@@ -1,26 +1,30 @@
 <template>
   <div class="auth-page">
-    <el-card class="auth-card" shadow="always">
-      <template #header>
-        <h2>登录</h2>
-      </template>
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="0" @submit.prevent="handleLogin">
+    <div class="auth-glass-card glass-effect">
+      <div class="auth-header">
+        <h2 class="text-gradient">欢迎回来</h2>
+        <p class="auth-subtitle">登录校园活动平台，发现更多精彩</p>
+      </div>
+
+      <el-form :model="form" :rules="rules" ref="formRef" label-width="0" @submit.prevent="handleLogin" class="auth-form">
         <el-form-item prop="username">
-          <el-input v-model="form.username" placeholder="用户名" :prefix-icon="User" size="large" />
+          <el-input v-model="form.username" placeholder="请输入用户名" :prefix-icon="User" size="large" class="custom-input" />
         </el-form-item>
         <el-form-item prop="password">
-          <el-input v-model="form.password" type="password" placeholder="密码" :prefix-icon="Lock" size="large" show-password />
+          <el-input v-model="form.password" type="password" placeholder="请输入密码" :prefix-icon="Lock" size="large" show-password class="custom-input" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" size="large" style="width: 100%" :loading="loading" native-type="submit">
-            登录
+          <el-button type="primary" size="large" class="auth-submit-btn" :loading="loading" native-type="submit">
+            登 录
           </el-button>
         </el-form-item>
       </el-form>
+
       <div class="auth-footer">
-        还没有账号？<router-link to="/register">立即注册</router-link>
+        <span>还没有账号？</span>
+        <router-link to="/register" class="register-link">立即注册</router-link>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -53,6 +57,7 @@ async function handleLogin() {
     ElMessage.success('登录成功')
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
+  } catch {
   } finally {
     loading.value = false
   }
@@ -64,21 +69,74 @@ async function handleLogin() {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 70vh;
+  min-height: calc(100vh - 140px);
+  padding: 20px;
 }
 
-.auth-card {
-  width: 420px;
+.auth-glass-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 48px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
-.auth-card h2 {
+.auth-header {
   text-align: center;
-  margin: 0;
+}
+
+.auth-header h2 {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.auth-subtitle {
+  color: var(--c-text-light);
+  font-size: 15px;
+}
+
+.auth-form {
+  margin-top: 10px;
+}
+
+/* Let the inputs look larger and rounder */
+:deep(.el-input__wrapper) {
+  padding: 8px 16px;
+  height: 48px;
+  border-radius: var(--radius-md) !important;
+  background-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+:deep(.el-input__prefix-inner) {
+  font-size: 18px;
+  color: var(--c-primary);
+}
+
+.auth-submit-btn {
+  width: 100%;
+  height: 52px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--radius-md) !important;
+  margin-top: 12px;
 }
 
 .auth-footer {
   text-align: center;
-  color: #909399;
-  font-size: 14px;
+  color: var(--c-text-light);
+  font-size: 15px;
+}
+
+.register-link {
+  color: var(--c-primary);
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.register-link:hover {
+  color: var(--c-primary-light);
+  text-decoration: underline;
 }
 </style>
