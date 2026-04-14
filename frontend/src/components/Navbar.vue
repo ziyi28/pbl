@@ -28,11 +28,10 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { ElMessage } from 'element-plus'
 
-const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 

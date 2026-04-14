@@ -130,14 +130,20 @@
 
             <!-- 操作按钮 -->
             <div class="actions" v-if="userStore.isLoggedIn">
-              <el-button type="primary" size="large" class="action-btn primary-action" @click="handleRegister" v-if="event.status === 'OPEN'">
-                立刻报名参加
-              </el-button>
-              <div class="secondary-actions">
-                <el-button size="large" class="action-btn" @click="handleCancelReg">
+              <template v-if="event.status === 'OPEN'">
+                <el-button v-if="isRegistered" size="large" class="action-btn" @click="handleCancelReg">
                   取消报名
                 </el-button>
-                <el-button size="large" :icon="Star" circle class="favorite-btn" @click="handleFavorite" />
+                <el-button v-else-if="event.currentParticipants < event.maxParticipants" type="primary" size="large" class="action-btn primary-action" @click="handleRegister">
+                  立刻报名参加
+                </el-button>
+                <el-button v-else disabled size="large" class="action-btn">
+                  名额已满
+                </el-button>
+              </template>
+              
+              <div class="secondary-actions">
+                <el-button size="large" :icon="isFavorited ? StarFilled : Star" circle class="favorite-btn" @click="handleFavoriteToggle" :type="isFavorited ? 'warning' : 'default'" />
               </div>
               
               <template v-if="userStore.isAdmin">
@@ -163,11 +169,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Star, Location, Clock, Calendar, User } from '@element-plus/icons-vue'
+import { Star, StarFilled, Location, Clock, Calendar, User } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getEvent, registerEvent, cancelRegistration, deleteEvent } from '../api/event'
+import { getEvent, registerEvent, cancelRegistration, deleteEvent, getMyRegistrations } from '../api/event'
 import { getComments, createComment, deleteComment } from '../api/comment'
-import { addFavorite } from '../api/favorite'
+import { addFavorite, removeFavorite, getMyFavorites } from '../api/favorite'
 import { useUserStore } from '../stores/user'
 import { CategoryMap, StatusMap } from '../types'
 import type { EventItem, Comment } from '../types'
@@ -183,6 +189,9 @@ const comments = ref<Comment[]>([])
 const commentContent = ref('')
 const commentPage = ref(1)
 const commentTotal = ref(0)
+
+const isRegistered = ref(false)
+const isFavorited = ref(false)
 
 const statusType = computed(() => {
   switch (event.value?.status) {
@@ -200,11 +209,26 @@ const bannerStyle = computed(() => {
   return { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }
 })
 
+async function checkUserStatus() {
+  if (!userStore.isLoggedIn) return
+  try {
+    const [regRes, favRes] = await Promise.all([
+      getMyRegistrations(),
+      getMyFavorites()
+    ])
+    isRegistered.value = regRes.data.some(e => e.id === eventId)
+    isFavorited.value = favRes.data.some(e => e.id === eventId)
+  } catch (error) {
+    console.error('Failed to check user status', error)
+  }
+}
+
 async function loadEvent() {
   loading.value = true
   try {
     const res = await getEvent(eventId)
     event.value = res.data
+    await checkUserStatus()
   } finally {
     loading.value = false
   }
@@ -220,7 +244,7 @@ async function handleRegister() {
   try {
     await registerEvent(eventId)
     ElMessage.success('报名成功')
-    loadEvent()
+    await loadEvent()
   } catch { /* error handled by interceptor */ }
 }
 
@@ -228,14 +252,21 @@ async function handleCancelReg() {
   try {
     await cancelRegistration(eventId)
     ElMessage.success('已取消报名')
-    loadEvent()
+    await loadEvent()
   } catch { /* error handled by interceptor */ }
 }
 
-async function handleFavorite() {
+async function handleFavoriteToggle() {
   try {
-    await addFavorite(eventId)
-    ElMessage.success('收藏成功')
+    if (isFavorited.value) {
+      await removeFavorite(eventId)
+      ElMessage.success('已取消收藏')
+      isFavorited.value = false
+    } else {
+      await addFavorite(eventId)
+      ElMessage.success('收藏成功')
+      isFavorited.value = true
+    }
   } catch { /* error handled by interceptor */ }
 }
 
