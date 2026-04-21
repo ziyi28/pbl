@@ -9,10 +9,18 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
 
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 10MB
+
 server:
   port: 8080
   servlet:
     context-path: /
+
+file:
+  upload-dir: uploads
 
 mybatis-plus:
   configuration:

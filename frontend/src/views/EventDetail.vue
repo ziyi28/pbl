@@ -58,7 +58,10 @@
             <!-- 评论列表 -->
             <div class="comment-list">
               <div class="comment-item fade-in-up" v-for="comment in comments" :key="comment.id">
-                <div class="comment-avatar">{{ comment.username.charAt(0).toUpperCase() }}</div>
+                <div class="comment-avatar">
+                  <img v-if="comment.userAvatar" :src="comment.userAvatar" class="comment-avatar-img" :alt="comment.username" />
+                  <span v-else>{{ comment.username.charAt(0).toUpperCase() }}</span>
+                </div>
                 <div class="comment-body">
                   <div class="comment-header">
                     <span class="comment-user">{{ comment.username }}</span>
@@ -548,6 +551,7 @@ onMounted(() => {
 .comment-avatar {
   width: 44px;
   height: 44px;
+  min-width: 44px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--c-secondary-light) 0%, var(--c-primary-light) 100%);
   color: white;
@@ -556,6 +560,13 @@ onMounted(() => {
   justify-content: center;
   font-weight: 700;
   font-size: 18px;
+  overflow: hidden;
+}
+
+.comment-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .comment-body {
