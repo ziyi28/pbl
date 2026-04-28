@@ -29,6 +29,8 @@ export interface EventItem {
   creatorId: number
   creatorName: string
   createdAt: string
+  isRegistered?: boolean
+  isFavorited?: boolean
 }
 
 // 评论类型

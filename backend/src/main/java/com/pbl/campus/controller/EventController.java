@@ -41,8 +41,9 @@ public class EventController {
     }
 
     @GetMapping("/{id}")
-    public Result<EventResponse> getEvent(@PathVariable Long id) {
-        return eventService.getEvent(id);
+    public Result<EventResponse> getEvent(@PathVariable Long id, Authentication authentication) {
+        Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
+        return eventService.getEvent(id, userId);
     }
 
     @PostMapping

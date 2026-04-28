@@ -24,4 +24,8 @@ public class EventResponse {
     private Long creatorId;
     private String creatorName;
     private LocalDateTime createdAt;
+
+    // 当前用户的交互状态（仅详情接口、用户已登录时填充）
+    private Boolean isRegistered;
+    private Boolean isFavorited;
 }

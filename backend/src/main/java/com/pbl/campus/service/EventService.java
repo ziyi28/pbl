@@ -10,8 +10,12 @@ import com.pbl.campus.dto.request.EventCreateRequest;
 import com.pbl.campus.dto.request.EventUpdateRequest;
 import com.pbl.campus.dto.response.EventResponse;
 import com.pbl.campus.entity.Event;
+import com.pbl.campus.entity.Favorite;
+import com.pbl.campus.entity.Registration;
 import com.pbl.campus.entity.User;
 import com.pbl.campus.mapper.EventMapper;
+import com.pbl.campus.mapper.FavoriteMapper;
+import com.pbl.campus.mapper.RegistrationMapper;
 import com.pbl.campus.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -28,6 +32,8 @@ public class EventService {
 
     private final EventMapper eventMapper;
     private final UserMapper userMapper;
+    private final RegistrationMapper registrationMapper;
+    private final FavoriteMapper favoriteMapper;
 
     public Result<EventResponse> createEvent(Long creatorId, EventCreateRequest request) {
         // 校验时间
@@ -52,11 +58,24 @@ public class EventService {
     }
 
     public Result<EventResponse> getEvent(Long id) {
+        return getEvent(id, null);
+    }
+
+    public Result<EventResponse> getEvent(Long id, Long userId) {
         Event event = eventMapper.selectById(id);
         if (event == null || event.getIsDeleted()) {
             return Result.error(404, "活动不存在");
         }
-        return Result.success(toResponse(event));
+        EventResponse response = toResponse(event);
+        if (userId != null) {
+            response.setIsRegistered(registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
+                    .eq(Registration::getUserId, userId)
+                    .eq(Registration::getEventId, id)) > 0);
+            response.setIsFavorited(favoriteMapper.selectCount(new LambdaQueryWrapper<Favorite>()
+                    .eq(Favorite::getUserId, userId)
+                    .eq(Favorite::getEventId, id)) > 0);
+        }
+        return Result.success(response);
     }
 
     public Result<PageResult<EventResponse>> listEvents(int page, int size,

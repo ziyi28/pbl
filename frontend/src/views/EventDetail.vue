@@ -65,7 +65,7 @@
                 <div class="comment-body">
                   <div class="comment-header">
                     <span class="comment-user">{{ comment.username }}</span>
-                    <span class="comment-time">{{ comment.createdAt }}</span>
+                    <span class="comment-time">{{ formatDateTime(comment.createdAt) }}</span>
                     <el-button
                       v-if="userStore.isLoggedIn && (userStore.user?.id === comment.userId || userStore.isAdmin)"
                       type="danger" text size="small" class="delete-comment-btn"
@@ -109,14 +109,14 @@
                 <div class="info-icon"><el-icon><Clock /></el-icon></div>
                 <div class="info-text">
                   <label>时间</label>
-                  <span>{{ event.startTime }} - <br>{{ event.endTime }}</span>
+                  <span>{{ formatDateTime(event.startTime) }} -<br>{{ formatDateTime(event.endTime) }}</span>
                 </div>
               </div>
               <div class="info-item">
                 <div class="info-icon"><el-icon><Calendar /></el-icon></div>
                 <div class="info-text">
                   <label>截止报名</label>
-                  <span>{{ event.registrationDeadline }}</span>
+                  <span>{{ formatDateTime(event.registrationDeadline) }}</span>
                 </div>
               </div>
               <div class="info-item">
@@ -136,6 +136,9 @@
               <template v-if="event.status === 'OPEN'">
                 <el-button v-if="isRegistered" size="large" class="action-btn" @click="handleCancelReg">
                   取消报名
+                </el-button>
+                <el-button v-else-if="isDeadlinePassed" disabled size="large" class="action-btn">
+                  报名已截止
                 </el-button>
                 <el-button v-else-if="event.currentParticipants < event.maxParticipants" type="primary" size="large" class="action-btn primary-action" @click="handleRegister">
                   立刻报名参加
@@ -174,9 +177,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Star, StarFilled, Location, Clock, Calendar, User } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getEvent, registerEvent, cancelRegistration, deleteEvent, getMyRegistrations } from '../api/event'
+import { getEvent, registerEvent, cancelRegistration, deleteEvent } from '../api/event'
 import { getComments, createComment, deleteComment } from '../api/comment'
-import { addFavorite, removeFavorite, getMyFavorites } from '../api/favorite'
+import { addFavorite, removeFavorite } from '../api/favorite'
 import { useUserStore } from '../stores/user'
 import { CategoryMap, StatusMap } from '../types'
 import type { EventItem, Comment } from '../types'
@@ -205,6 +208,11 @@ const statusType = computed(() => {
   }
 })
 
+const isDeadlinePassed = computed(() => {
+  if (!event.value?.registrationDeadline) return false
+  return new Date(event.value.registrationDeadline) < new Date()
+})
+
 const bannerStyle = computed(() => {
   if (event.value?.coverImage) {
     return { backgroundImage: `url(${event.value.coverImage})` }
@@ -212,18 +220,15 @@ const bannerStyle = computed(() => {
   return { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }
 })
 
-async function checkUserStatus() {
-  if (!userStore.isLoggedIn) return
-  try {
-    const [regRes, favRes] = await Promise.all([
-      getMyRegistrations(),
-      getMyFavorites()
-    ])
-    isRegistered.value = regRes.data.some(e => e.id === eventId)
-    isFavorited.value = favRes.data.some(e => e.id === eventId)
-  } catch (error) {
-    console.error('Failed to check user status', error)
-  }
+function formatDateTime(dateStr: string) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${day} ${h}:${min}`
 }
 
 async function loadEvent() {
@@ -231,7 +236,9 @@ async function loadEvent() {
   try {
     const res = await getEvent(eventId)
     event.value = res.data
-    await checkUserStatus()
+    // 后端已在详情接口中返回 isRegistered / isFavorited
+    isRegistered.value = res.data.isRegistered ?? false
+    isFavorited.value = res.data.isFavorited ?? false
   } finally {
     loading.value = false
   }
@@ -252,6 +259,7 @@ async function handleRegister() {
 }
 
 async function handleCancelReg() {
+  await ElMessageBox.confirm('确定取消报名吗？取消后名额可能被其他人抢占。', '确认取消', { type: 'warning', confirmButtonText: '确定取消', cancelButtonText: '再想想' })
   try {
     await cancelRegistration(eventId)
     ElMessage.success('已取消报名')
