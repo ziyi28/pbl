@@ -85,6 +85,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Knife4j for Spring Boot 3 -->
+        <dependency>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-spring-boot3-starter</artifactId>
+            <version>4.4.0</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

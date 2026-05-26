@@ -1,6 +1,9 @@
 package com.pbl.campus.controller;
 
 import com.pbl.campus.common.Result;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,36 +21,34 @@ import java.util.UUID;
 @Slf4j
 @RestController
 @RequestMapping("/api")
+@Tag(name = "文件接口", description = "文件上传相关接口")
 public class FileController {
 
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
 
     @PostMapping("/upload")
-    public Result<String> upload(@RequestParam("file") MultipartFile file) {
+    @Operation(summary = "上传图片", description = "上传活动封面图片，仅支持图片格式，最大2MB")
+    public Result<String> upload(@Parameter(description = "图片文件") @RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return Result.error("文件不能为空");
         }
 
-        // 校验文件类型（仅图片）
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
             return Result.error("仅支持上传图片文件");
         }
 
-        // 校验文件大小（最大 2MB）
         if (file.getSize() > 2 * 1024 * 1024) {
             return Result.error("文件大小不能超过 2MB");
         }
 
         try {
-            // 确保上传目录存在
             Path uploadPath = Paths.get(uploadDir);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
 
-            // 生成唯一文件名
             String originalFilename = file.getOriginalFilename();
             String extension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
@@ -55,11 +56,9 @@ public class FileController {
             }
             String newFilename = UUID.randomUUID().toString() + extension;
 
-            // 保存文件
             Path filePath = uploadPath.resolve(newFilename);
             file.transferTo(filePath.toFile());
 
-            // 返回可访问的 URL
             String fileUrl = "/uploads/" + newFilename;
             log.info("文件上传成功: {}", fileUrl);
             return Result.success("上传成功", fileUrl);
