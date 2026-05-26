@@ -33,11 +33,21 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         // Knife4j/Swagger 接口公开访问
-                        .requestMatchers("/swagger-ui/**", "/doc.html", "/api-docs/**", "/swagger-resources/**").permitAll()
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/doc.html",
+                                "/swagger-resources/**"
+                        ).permitAll()
                         // 公开接口
                         .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/events/*/comments").permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/events",
+                                "/api/events/*",
+                                "/api/events/*/comments"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/events/*/participants").authenticated()
                         // 上传文件的静态资源公开访问
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                         // 管理员接口

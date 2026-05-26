@@ -4,14 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.pbl.campus.common.PageResult;
 import com.pbl.campus.common.Result;
+import com.pbl.campus.common.enums.EventStatus;
 import com.pbl.campus.dto.request.CommentCreateRequest;
 import com.pbl.campus.dto.response.CommentResponse;
-import com.pbl.campus.entity.Comment;
-import com.pbl.campus.entity.CommentLike;
-import com.pbl.campus.entity.User;
-import com.pbl.campus.mapper.CommentLikeMapper;
-import com.pbl.campus.mapper.CommentMapper;
-import com.pbl.campus.mapper.UserMapper;
+import com.pbl.campus.entity.*;
+import com.pbl.campus.mapper.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,8 +21,24 @@ public class CommentService {
     private final CommentMapper commentMapper;
     private final UserMapper userMapper;
     private final CommentLikeMapper commentLikeMapper;
+    private final EventMapper eventMapper;
+    private final RegistrationMapper registrationMapper;
 
     public Result<CommentResponse> createComment(Long userId, Long eventId, CommentCreateRequest request) {
+        Event event = eventMapper.selectById(eventId);
+        if (event == null || event.getIsDeleted()) {
+            return Result.error(404, "活动不存在");
+        }
+        if (event.getStatus() == EventStatus.ENDED) {
+            return Result.error("活动已结束，不可评论");
+        }
+        Long registeredCount = registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
+                .eq(Registration::getUserId, userId)
+                .eq(Registration::getEventId, eventId));
+        if (registeredCount == 0) {
+            return Result.error(403, "需报名后才能评论");
+        }
+
         Comment comment = new Comment();
         comment.setContent(request.getContent());
         comment.setUserId(userId);
@@ -53,7 +66,7 @@ public class CommentService {
                 new Page<>(page, size),
                 new LambdaQueryWrapper<Comment>()
                         .eq(Comment::getEventId, eventId)
-                        .orderByDesc(Comment::getCreatedAt));
+                        .orderByDesc(Comment::getId));
 
         List<CommentResponse> records = pageResult.getRecords().stream()
                 .map(this::toResponse)
@@ -69,7 +82,7 @@ public class CommentService {
                 new Page<>(page, size),
                 new LambdaQueryWrapper<Comment>()
                         .eq(Comment::getEventId, eventId)
-                        .orderByDesc(Comment::getCreatedAt));
+                        .orderByDesc(Comment::getId));
 
         List<CommentResponse> records = pageResult.getRecords().stream()
                 .map(comment -> toResponse(comment, currentUserId))
@@ -93,7 +106,8 @@ public class CommentService {
 
         if (existingLike != null) {
             if (existingLike.getIsDeleted() == 0) {
-                commentLikeMapper.deleteById(existingLike.getId());
+                existingLike.setIsDeleted(1);
+                commentLikeMapper.updateById(existingLike);
                 return Result.success("取消点赞", null);
             } else {
                 existingLike.setIsDeleted(0);
