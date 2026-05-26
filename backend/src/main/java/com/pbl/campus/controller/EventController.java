@@ -14,6 +14,9 @@ import com.pbl.campus.service.CommentService;
 import com.pbl.campus.service.EventService;
 import com.pbl.campus.service.FavoriteService;
 import com.pbl.campus.service.RegistrationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -24,6 +27,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
+@Tag(name = "活动接口", description = "活动CRUD、报名、评论、收藏相关接口")
 public class EventController {
 
     private final EventService eventService;
@@ -31,25 +35,26 @@ public class EventController {
     private final CommentService commentService;
     private final FavoriteService favoriteService;
 
-    // ========== 活动 CRUD ==========
-
     @GetMapping
+    @Operation(summary = "查询活动列表", description = "分页查询活动列表，支持分类、状态、关键词筛选")
     public Result<PageResult<EventResponse>> listEvents(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) EventCategory category,
-            @RequestParam(required = false) EventStatus status,
-            @RequestParam(required = false) String keyword) {
+            @Parameter(description = "页码，默认1") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页大小，默认10") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "活动分类") @RequestParam(required = false) EventCategory category,
+            @Parameter(description = "活动状态") @RequestParam(required = false) EventStatus status,
+            @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword) {
         return eventService.listEvents(page, size, category, status, keyword);
     }
 
     @GetMapping("/{id}")
-    public Result<EventResponse> getEvent(@PathVariable Long id, Authentication authentication) {
+    @Operation(summary = "查询活动详情", description = "根据ID查询活动详情")
+    public Result<EventResponse> getEvent(@Parameter(description = "活动ID") @PathVariable Long id, Authentication authentication) {
         Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
         return eventService.getEvent(id, userId);
     }
 
     @PostMapping
+    @Operation(summary = "创建活动", description = "管理员创建新活动")
     public Result<EventResponse> createEvent(Authentication authentication,
                                               @Valid @RequestBody EventCreateRequest request) {
         Long userId = (Long) authentication.getPrincipal();
@@ -57,65 +62,68 @@ public class EventController {
     }
 
     @PutMapping("/{id}")
-    public Result<EventResponse> updateEvent(@PathVariable Long id,
+    @Operation(summary = "更新活动", description = "管理员更新活动信息")
+    public Result<EventResponse> updateEvent(@Parameter(description = "活动ID") @PathVariable Long id,
                                               @Valid @RequestBody EventUpdateRequest request) {
         return eventService.updateEvent(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public Result<Void> deleteEvent(@PathVariable Long id) {
+    @Operation(summary = "删除活动", description = "管理员删除活动")
+    public Result<Void> deleteEvent(@Parameter(description = "活动ID") @PathVariable Long id) {
         return eventService.deleteEvent(id);
     }
 
-    // ========== 报名 ==========
-
     @PostMapping("/{id}/registrations")
-    public Result<Void> register(Authentication authentication, @PathVariable Long id) {
+    @Operation(summary = "报名活动", description = "用户报名参加活动")
+    public Result<Void> register(Authentication authentication, @Parameter(description = "活动ID") @PathVariable Long id) {
         Long userId = (Long) authentication.getPrincipal();
         return registrationService.register(userId, id);
     }
 
     @DeleteMapping("/{id}/registrations")
-    public Result<Void> cancelRegistration(Authentication authentication, @PathVariable Long id) {
+    @Operation(summary = "取消报名", description = "用户取消活动报名")
+    public Result<Void> cancelRegistration(Authentication authentication, @Parameter(description = "活动ID") @PathVariable Long id) {
         Long userId = (Long) authentication.getPrincipal();
         return registrationService.cancelRegistration(userId, id);
     }
 
     @GetMapping("/{id}/participants")
-    public Result<List<ParticipantResponse>> getEventParticipants(@PathVariable Long id) {
+    @Operation(summary = "获取活动参与者", description = "获取活动的所有参与者列表")
+    public Result<List<ParticipantResponse>> getEventParticipants(@Parameter(description = "活动ID") @PathVariable Long id) {
         return registrationService.getEventParticipants(id);
     }
 
-    // ========== 评论 ==========
-
     @GetMapping("/{id}/comments")
+    @Operation(summary = "获取活动评论", description = "分页获取活动的评论列表")
     public Result<PageResult<CommentResponse>> listComments(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "活动ID") @PathVariable Long id,
+            @Parameter(description = "页码，默认1") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页大小，默认20") @RequestParam(defaultValue = "20") int size,
             Authentication authentication) {
         Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
         return commentService.listComments(id, page, size, userId);
     }
 
     @PostMapping("/{id}/comments")
+    @Operation(summary = "发表评论", description = "用户对活动发表评论")
     public Result<CommentResponse> createComment(Authentication authentication,
-                                                  @PathVariable Long id,
+                                                  @Parameter(description = "活动ID") @PathVariable Long id,
                                                   @Valid @RequestBody CommentCreateRequest request) {
         Long userId = (Long) authentication.getPrincipal();
         return commentService.createComment(userId, id, request);
     }
 
-    // ========== 收藏 ==========
-
     @PostMapping("/{id}/favorites")
-    public Result<Void> addFavorite(Authentication authentication, @PathVariable Long id) {
+    @Operation(summary = "收藏活动", description = "用户收藏活动")
+    public Result<Void> addFavorite(Authentication authentication, @Parameter(description = "活动ID") @PathVariable Long id) {
         Long userId = (Long) authentication.getPrincipal();
         return favoriteService.addFavorite(userId, id);
     }
 
     @DeleteMapping("/{id}/favorites")
-    public Result<Void> removeFavorite(Authentication authentication, @PathVariable Long id) {
+    @Operation(summary = "取消收藏", description = "用户取消活动收藏")
+    public Result<Void> removeFavorite(Authentication authentication, @Parameter(description = "活动ID") @PathVariable Long id) {
         Long userId = (Long) authentication.getPrincipal();
         return favoriteService.removeFavorite(userId, id);
     }
