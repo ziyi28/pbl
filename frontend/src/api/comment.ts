@@ -12,3 +12,7 @@ export function createComment(eventId: number, data: CommentCreateRequest) {
 export function deleteComment(commentId: number) {
   return request.delete<any, Result<void>>(`/comments/${commentId}`)
 }
+
+export function toggleCommentLike(commentId: number) {
+  return request.post<any, Result<void>>(`/comments/${commentId}/like`)
+}

@@ -75,6 +75,20 @@
                     </el-button>
                   </div>
                   <p class="comment-content">{{ comment.content }}</p>
+                  <div class="comment-actions">
+                    <el-button
+                      v-if="userStore.isLoggedIn"
+                      :type="comment.isLiked ? 'primary' : 'default'"
+                      text
+                      size="small"
+                      @click="handleToggleLike(comment)"
+                      :loading="likeLoading[comment.id]"
+                    >
+                      <el-icon><component :is="comment.isLiked ? 'StarFilled' : 'Star'" /></el-icon>
+                      {{ comment.likeCount || 0 }}
+                    </el-button>
+                    <span v-else class="like-count">{{ comment.likeCount || 0 }} 点赞</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -166,6 +180,30 @@
               </el-button>
             </div>
           </el-card>
+
+          <!-- 参与者列表 -->
+          <el-card class="glass-effect participants-card">
+            <template #header>
+              <h3 class="section-title">参与人员</h3>
+              <span class="participant-count">{{ participants.length }} 人已报名</span>
+            </template>
+
+            <div class="participants-list">
+              <div class="participant-item" v-for="participant in participants" :key="participant.userId">
+                <div class="participant-avatar">
+                  <img v-if="participant.avatar" :src="participant.avatar" class="participant-avatar-img" :alt="participant.username" />
+                  <span v-else>{{ participant.username.charAt(0).toUpperCase() }}</span>
+                </div>
+                <div class="participant-info">
+                  <span class="participant-name">{{ participant.username }}</span>
+                  <span class="participant-email">{{ participant.email }}</span>
+                </div>
+                <span class="participant-time">{{ formatDateTime(participant.registeredAt) }}</span>
+              </div>
+            </div>
+
+            <el-empty v-if="participants.length === 0" description="暂无参与者，快来报名吧！" :image-size="60" />
+          </el-card>
         </div>
       </div>
     </template>
@@ -177,12 +215,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Star, StarFilled, Location, Clock, Calendar, User } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getEvent, registerEvent, cancelRegistration, deleteEvent } from '../api/event'
-import { getComments, createComment, deleteComment } from '../api/comment'
+import { getEvent, registerEvent, cancelRegistration, deleteEvent, getEventParticipants } from '../api/event'
+import { getComments, createComment, deleteComment, toggleCommentLike } from '../api/comment'
 import { addFavorite, removeFavorite } from '../api/favorite'
 import { useUserStore } from '../stores/user'
 import { CategoryMap, StatusMap } from '../types'
-import type { EventItem, Comment } from '../types'
+import type { EventItem, Comment, Participant } from '../types'
 
 const route = useRoute()
 const router = useRouter()
@@ -195,9 +233,11 @@ const comments = ref<Comment[]>([])
 const commentContent = ref('')
 const commentPage = ref(1)
 const commentTotal = ref(0)
+const likeLoading = ref<Record<number, boolean>>({})
 
 const isRegistered = ref(false)
 const isFavorited = ref(false)
+const participants = ref<Participant[]>([])
 
 const statusType = computed(() => {
   switch (event.value?.status) {
@@ -248,6 +288,11 @@ async function loadComments() {
   const res = await getComments(eventId, { page: commentPage.value, size: 20 })
   comments.value = res.data.records
   commentTotal.value = res.data.total
+}
+
+async function loadParticipants() {
+  const res = await getEventParticipants(eventId)
+  participants.value = res.data
 }
 
 async function handleRegister() {
@@ -309,9 +354,21 @@ async function handleDeleteComment(id: number) {
   } catch { /* error handled by interceptor */ }
 }
 
+async function handleToggleLike(comment: Comment) {
+  likeLoading.value[comment.id] = true
+  try {
+    await toggleCommentLike(comment.id)
+    comment.isLiked = !comment.isLiked
+    comment.likeCount = comment.isLiked ? (comment.likeCount || 0) + 1 : Math.max(0, (comment.likeCount || 0) - 1)
+    ElMessage.success(comment.isLiked ? '点赞成功' : '取消点赞')
+  } catch { /* error handled by interceptor */ }
+  likeLoading.value[comment.id] = false
+}
+
 onMounted(() => {
   loadEvent()
   loadComments()
+  loadParticipants()
 })
 </script>
 
@@ -605,6 +662,100 @@ onMounted(() => {
 .comment-content {
   color: var(--c-text);
   line-height: 1.6;
+}
+
+.comment-actions {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.like-count {
+  font-size: 12px;
+  color: var(--c-text-light);
+}
+
+/* Participants section */
+.participants-card {
+  padding: 24px;
+  margin-top: 24px;
+}
+
+:deep(.participants-card .el-card__header) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.participant-count {
+  font-size: 14px;
+  color: var(--c-text-light);
+  background: rgba(118, 75, 162, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.participants-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.participant-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-md);
+}
+
+.participant-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--c-secondary-light) 0%, var(--c-primary-light) 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  overflow: hidden;
+}
+
+.participant-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.participant-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.participant-name {
+  display: block;
+  font-weight: 600;
+  color: var(--c-primary-dark);
+  font-size: 14px;
+}
+
+.participant-email {
+  display: block;
+  font-size: 12px;
+  color: var(--c-text-light);
+  margin-top: 2px;
+}
+
+.participant-time {
+  font-size: 12px;
+  color: var(--c-text-light);
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {

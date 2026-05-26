@@ -4,10 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.pbl.campus.common.Result;
 import com.pbl.campus.common.enums.EventStatus;
 import com.pbl.campus.dto.response.EventResponse;
+import com.pbl.campus.dto.response.ParticipantResponse;
 import com.pbl.campus.entity.Event;
 import com.pbl.campus.entity.Registration;
+import com.pbl.campus.entity.User;
 import com.pbl.campus.mapper.EventMapper;
 import com.pbl.campus.mapper.RegistrationMapper;
+import com.pbl.campus.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -22,6 +25,7 @@ public class RegistrationService {
 
     private final RegistrationMapper registrationMapper;
     private final EventMapper eventMapper;
+    private final UserMapper userMapper;
 
     @Transactional
     public Result<Void> register(Long userId, Long eventId) {
@@ -105,5 +109,29 @@ public class RegistrationService {
                 .toList();
 
         return Result.success(events);
+    }
+
+    public Result<List<ParticipantResponse>> getEventParticipants(Long eventId) {
+        List<Registration> registrations = registrationMapper.selectList(
+                new LambdaQueryWrapper<Registration>()
+                        .eq(Registration::getEventId, eventId)
+                        .orderByDesc(Registration::getCreatedAt));
+
+        List<ParticipantResponse> participants = registrations.stream()
+                .map(r -> {
+                    User user = userMapper.selectById(r.getUserId());
+                    if (user == null) return null;
+                    ParticipantResponse response = new ParticipantResponse();
+                    response.setUserId(user.getId());
+                    response.setUsername(user.getUsername());
+                    response.setAvatar(user.getAvatar());
+                    response.setEmail(user.getEmail());
+                    response.setRegisteredAt(r.getCreatedAt());
+                    return response;
+                })
+                .filter(p -> p != null)
+                .toList();
+
+        return Result.success(participants);
     }
 }

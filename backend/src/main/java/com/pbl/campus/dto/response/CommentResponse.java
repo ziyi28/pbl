@@ -14,4 +14,6 @@ public class CommentResponse {
     private String userAvatar;
     private Long eventId;
     private LocalDateTime createdAt;
+    private Integer likeCount;
+    private Boolean isLiked;
 }

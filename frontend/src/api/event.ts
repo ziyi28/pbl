@@ -1,5 +1,5 @@
 import request from './index'
-import type { Result, PageResult, EventItem, EventCreateRequest, EventUpdateRequest, EventCategory, EventStatus } from '../types'
+import type { Result, PageResult, EventItem, EventCreateRequest, EventUpdateRequest, EventCategory, EventStatus, Participant } from '../types'
 
 export function getEvents(params: {
   page?: number
@@ -38,4 +38,8 @@ export function cancelRegistration(eventId: number) {
 
 export function getMyRegistrations() {
   return request.get<any, Result<EventItem[]>>('/users/me/registrations')
+}
+
+export function getEventParticipants(eventId: number) {
+  return request.get<any, Result<Participant[]>>(`/events/${eventId}/participants`)
 }

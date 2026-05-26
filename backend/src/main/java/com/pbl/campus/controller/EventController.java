@@ -9,6 +9,7 @@ import com.pbl.campus.dto.request.EventCreateRequest;
 import com.pbl.campus.dto.request.EventUpdateRequest;
 import com.pbl.campus.dto.response.CommentResponse;
 import com.pbl.campus.dto.response.EventResponse;
+import com.pbl.campus.dto.response.ParticipantResponse;
 import com.pbl.campus.service.CommentService;
 import com.pbl.campus.service.EventService;
 import com.pbl.campus.service.FavoriteService;
@@ -17,6 +18,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/events")
@@ -78,14 +81,21 @@ public class EventController {
         return registrationService.cancelRegistration(userId, id);
     }
 
+    @GetMapping("/{id}/participants")
+    public Result<List<ParticipantResponse>> getEventParticipants(@PathVariable Long id) {
+        return registrationService.getEventParticipants(id);
+    }
+
     // ========== 评论 ==========
 
     @GetMapping("/{id}/comments")
     public Result<PageResult<CommentResponse>> listComments(
             @PathVariable Long id,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return commentService.listComments(id, page, size);
+            @RequestParam(defaultValue = "20") int size,
+            Authentication authentication) {
+        Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
+        return commentService.listComments(id, page, size, userId);
     }
 
     @PostMapping("/{id}/comments")

@@ -33,6 +33,15 @@ export interface EventItem {
   isFavorited?: boolean
 }
 
+// 参与者类型
+export interface Participant {
+  userId: number
+  username: string
+  avatar: string | null
+  email: string | null
+  registeredAt: string
+}
+
 // 评论类型
 export interface Comment {
   id: number
@@ -42,6 +51,8 @@ export interface Comment {
   userAvatar: string | null
   eventId: number
   createdAt: string
+  likeCount: number
+  isLiked: boolean
 }
 
 // 统一响应类型
