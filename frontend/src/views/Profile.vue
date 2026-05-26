@@ -135,7 +135,7 @@ import { Calendar, Edit, StarFilled, Ticket, Camera, Loading } from '@element-pl
 import { updateCurrentUser } from '../api/auth'
 import { getMyRegistrations } from '../api/event'
 import { getMyFavorites } from '../api/favorite'
-import { uploadFile } from '../api/upload'
+import { uploadFile, validateImageFile } from '../api/upload'
 import { useUserStore } from '../stores/user'
 import EventCard from '../components/EventCard.vue'
 import type { EventItem } from '../types'
@@ -170,18 +170,23 @@ async function handleAvatarUpload(e: Event) {
   const file = target.files?.[0]
   if (!file) return
 
+  const validationMessage = validateImageFile(file)
+  if (validationMessage) {
+    ElMessage.error(validationMessage)
+    if (target) target.value = ''
+    return
+  }
+
   avatarUploading.value = true
   try {
     const res = await uploadFile(file)
-    // res.data 是返回的 URL 路径
     await updateCurrentUser({ avatar: res.data })
     await userStore.fetchUser()
     ElMessage.success('头像更新成功')
   } catch {
-    /* error handled by interceptor */
+    ElMessage.error('头像上传失败，请重试')
   } finally {
     avatarUploading.value = false
-    // 重置 input 以允许重复选择同一文件
     if (target) target.value = ''
   }
 }

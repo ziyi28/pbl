@@ -12,10 +12,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -23,6 +26,9 @@ import java.util.UUID;
 @RequestMapping("/api")
 @Tag(name = "文件接口", description = "文件上传相关接口")
 public class FileController {
+
+    private static final long MAX_FILE_SIZE = 2 * 1024 * 1024;
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(".jpg", ".jpeg", ".png", ".gif", ".webp");
 
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
@@ -39,8 +45,26 @@ public class FileController {
             return Result.error("仅支持上传图片文件");
         }
 
-        if (file.getSize() > 2 * 1024 * 1024) {
+        if (file.getSize() > MAX_FILE_SIZE) {
             return Result.error("文件大小不能超过 2MB");
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+        }
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            return Result.error("仅支持jpg、jpeg、png、gif、webp格式");
+        }
+
+        try (InputStream inputStream = file.getInputStream()) {
+            if (ImageIO.read(inputStream) == null) {
+                return Result.error("上传文件不是有效的图片");
+            }
+        } catch (IOException e) {
+            log.error("读取图片失败", e);
+            return Result.error("上传失败，请重试");
         }
 
         try {
@@ -49,11 +73,6 @@ public class FileController {
                 Files.createDirectories(uploadPath);
             }
 
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
             String newFilename = UUID.randomUUID().toString() + extension;
 
             Path filePath = uploadPath.resolve(newFilename);

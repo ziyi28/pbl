@@ -100,10 +100,13 @@ public class EventService {
         return Result.success(result);
     }
 
-    public Result<EventResponse> updateEvent(Long id, EventUpdateRequest request) {
+    public Result<EventResponse> updateEvent(Long id, Long userId, EventUpdateRequest request) {
         Event event = eventMapper.selectById(id);
         if (event == null || event.getIsDeleted()) {
             return Result.error(404, "活动不存在");
+        }
+        if (!event.getCreatorId().equals(userId)) {
+            return Result.error(403, "无权编辑该活动");
         }
         if (event.getStatus() == EventStatus.ENDED) {
             return Result.error("已结束的活动不可编辑");
@@ -111,6 +114,19 @@ public class EventService {
         if (request.getMaxParticipants() != null
                 && request.getMaxParticipants() < event.getCurrentParticipants()) {
             return Result.error("最大人数不能小于当前已报名人数");
+        }
+
+        LocalDateTime startTime = request.getStartTime() != null ? request.getStartTime() : event.getStartTime();
+        LocalDateTime endTime = request.getEndTime() != null ? request.getEndTime() : event.getEndTime();
+        LocalDateTime registrationDeadline = request.getRegistrationDeadline() != null
+                ? request.getRegistrationDeadline()
+                : event.getRegistrationDeadline();
+
+        if (endTime.isBefore(startTime)) {
+            return Result.error("结束时间必须晚于开始时间");
+        }
+        if (!registrationDeadline.isBefore(startTime)) {
+            return Result.error("报名截止时间必须早于开始时间");
         }
 
         if (request.getTitle() != null) event.setTitle(request.getTitle());
@@ -127,10 +143,13 @@ public class EventService {
         return Result.success("活动更新成功", toResponse(event));
     }
 
-    public Result<Void> deleteEvent(Long id) {
+    public Result<Void> deleteEvent(Long id, Long userId) {
         Event event = eventMapper.selectById(id);
         if (event == null || event.getIsDeleted()) {
             return Result.error(404, "活动不存在");
+        }
+        if (!event.getCreatorId().equals(userId)) {
+            return Result.error(403, "无权删除该活动");
         }
         eventMapper.deleteById(id);
         return Result.success("活动已删除", null);

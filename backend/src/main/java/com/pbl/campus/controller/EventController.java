@@ -63,15 +63,18 @@ public class EventController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新活动", description = "管理员更新活动信息")
-    public Result<EventResponse> updateEvent(@Parameter(description = "活动ID") @PathVariable Long id,
-                                              @Valid @RequestBody EventUpdateRequest request) {
-        return eventService.updateEvent(id, request);
+    public Result<EventResponse> updateEvent(Authentication authentication,
+                                             @Parameter(description = "活动ID") @PathVariable Long id,
+                                             @Valid @RequestBody EventUpdateRequest request) {
+        Long userId = (Long) authentication.getPrincipal();
+        return eventService.updateEvent(id, userId, request);
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除活动", description = "管理员删除活动")
-    public Result<Void> deleteEvent(@Parameter(description = "活动ID") @PathVariable Long id) {
-        return eventService.deleteEvent(id);
+    public Result<Void> deleteEvent(Authentication authentication, @Parameter(description = "活动ID") @PathVariable Long id) {
+        Long userId = (Long) authentication.getPrincipal();
+        return eventService.deleteEvent(id, userId);
     }
 
     @PostMapping("/{id}/registrations")
@@ -90,8 +93,12 @@ public class EventController {
 
     @GetMapping("/{id}/participants")
     @Operation(summary = "获取活动参与者", description = "获取活动的所有参与者列表")
-    public Result<List<ParticipantResponse>> getEventParticipants(@Parameter(description = "活动ID") @PathVariable Long id) {
-        return registrationService.getEventParticipants(id);
+    public Result<List<ParticipantResponse>> getEventParticipants(Authentication authentication,
+                                                                  @Parameter(description = "活动ID") @PathVariable Long id) {
+        Long userId = (Long) authentication.getPrincipal();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+        return registrationService.getEventParticipants(id, userId, isAdmin);
     }
 
     @GetMapping("/{id}/comments")

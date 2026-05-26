@@ -21,7 +21,11 @@ public class FavoriteService {
     private final EventMapper eventMapper;
 
     public Result<Void> addFavorite(Long userId, Long eventId) {
-        // 检查是否已收藏
+        Event event = eventMapper.selectById(eventId);
+        if (event == null || event.getIsDeleted()) {
+            return Result.error("活动不存在");
+        }
+
         Long count = favoriteMapper.selectCount(new LambdaQueryWrapper<Favorite>()
                 .eq(Favorite::getUserId, userId)
                 .eq(Favorite::getEventId, eventId));
@@ -38,6 +42,11 @@ public class FavoriteService {
     }
 
     public Result<Void> removeFavorite(Long userId, Long eventId) {
+        Event event = eventMapper.selectById(eventId);
+        if (event == null || event.getIsDeleted()) {
+            return Result.error("活动不存在");
+        }
+
         Favorite favorite = favoriteMapper.selectOne(new LambdaQueryWrapper<Favorite>()
                 .eq(Favorite::getUserId, userId)
                 .eq(Favorite::getEventId, eventId));

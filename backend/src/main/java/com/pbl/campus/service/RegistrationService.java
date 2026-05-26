@@ -69,7 +69,7 @@ public class RegistrationService {
     @Transactional
     public Result<Void> cancelRegistration(Long userId, Long eventId) {
         Event event = eventMapper.selectById(eventId);
-        if (event == null) {
+        if (event == null || event.getIsDeleted()) {
             return Result.error("活动不存在");
         }
         if (event.getStatus() != EventStatus.OPEN) {
@@ -86,7 +86,10 @@ public class RegistrationService {
         registrationMapper.deleteById(registration.getId());
 
         event.setCurrentParticipants(event.getCurrentParticipants() - 1);
-        eventMapper.updateById(event);
+        int rows = eventMapper.updateById(event);
+        if (rows == 0) {
+            return Result.error("取消失败，请重试");
+        }
 
         return Result.success("已取消报名", null);
     }
@@ -111,7 +114,15 @@ public class RegistrationService {
         return Result.success(events);
     }
 
-    public Result<List<ParticipantResponse>> getEventParticipants(Long eventId) {
+    public Result<List<ParticipantResponse>> getEventParticipants(Long eventId, Long userId, boolean isAdmin) {
+        Event event = eventMapper.selectById(eventId);
+        if (event == null || event.getIsDeleted()) {
+            return Result.error(404, "活动不存在");
+        }
+        if (!isAdmin && !event.getCreatorId().equals(userId)) {
+            return Result.error(403, "无权查看参与者列表");
+        }
+
         List<Registration> registrations = registrationMapper.selectList(
                 new LambdaQueryWrapper<Registration>()
                         .eq(Registration::getEventId, eventId)
