@@ -2,27 +2,29 @@
   <header class="navbar-container glass-effect">
     <router-link to="/" class="logo">
       <el-icon class="logo-icon"><HomeFilled /></el-icon>
-      <span class="logo-text text-gradient">校园活动 Pro</span>
+      <span class="logo-text">校园活动 Pro</span>
     </router-link>
 
     <div class="nav-spacer" />
 
     <nav class="nav-links">
-      <template v-if="userStore.isLoggedIn">
-        <router-link v-if="userStore.isAdmin" to="/events/create" class="nav-item">
-          <el-icon><Plus /></el-icon> 发布活动
-        </router-link>
-        <router-link to="/profile" class="nav-item">
-          <el-icon><User /></el-icon> {{ userStore.username }}
-        </router-link>
-        <button class="nav-btn logout-btn" @click="handleLogout">
-          <el-icon><SwitchButton /></el-icon> 退出
-        </button>
-      </template>
-      <template v-else>
-        <router-link to="/login" class="nav-item login-link">登录</router-link>
-        <router-link to="/register" class="nav-btn register-btn">立即注册</router-link>
-      </template>
+      <div class="action-group">
+        <template v-if="userStore.isLoggedIn">
+          <router-link v-if="userStore.isAdmin" to="/events/create" class="nav-item">
+            <el-icon><Plus /></el-icon> 发布活动
+          </router-link>
+          <router-link to="/profile" class="nav-item">
+            <el-icon><User /></el-icon> {{ userStore.username }}
+          </router-link>
+          <button class="nav-btn logout-btn" @click="handleLogout">
+            <el-icon><SwitchButton /></el-icon> 退出
+          </button>
+        </template>
+        <template v-else>
+          <router-link to="/login" class="nav-item login-link">登录</router-link>
+          <router-link to="/register" class="nav-btn register-btn">立即注册</router-link>
+        </template>
+      </div>
     </nav>
   </header>
 </template>
@@ -45,18 +47,17 @@ function handleLogout() {
 <style scoped>
 .navbar-container {
   position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 40px);
-  max-width: 1200px;
+  top: 0;
+  left: 0;
+  width: 100%;
   height: 64px;
-  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   padding: 0 24px;
   z-index: 100;
-  box-shadow: var(--shadow-md);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
 }
 
@@ -64,15 +65,16 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 600;
   font-family: var(--font-heading);
   text-decoration: none;
+  color: white;
 }
 
 .logo-icon {
-  font-size: 24px;
-  color: var(--c-primary);
+  font-size: 22px;
+  color: white;
 }
 
 .nav-spacer {
@@ -85,61 +87,70 @@ function handleLogout() {
   gap: 8px;
 }
 
+.action-group {
+  display: flex;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px;
+  align-items: center;
+}
+
 .nav-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border-radius: var(--radius-round);
-  color: var(--c-text);
+  padding: 8px 12px;
+  color: #f5f5f5;
+  font-size: 14px;
   font-weight: 500;
   transition: all 0.2s ease;
   text-decoration: none;
+  border-radius: 6px;
 }
 
 .nav-item:hover {
-  background: rgba(118, 75, 162, 0.08); /* slight purple tint */
-  color: var(--c-primary);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .router-link-active {
-  color: var(--c-primary);
-  background: rgba(118, 75, 162, 0.08);
+  color: #ffffff;
 }
 
 .nav-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 20px;
-  border-radius: 100px;
-  font-weight: 600;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   outline: none;
   border: none;
+  background: transparent;
+  color: #f5f5f5;
   transition: all 0.2s ease;
+  border-radius: 6px;
+}
+
+.nav-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .register-btn {
-  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-light) 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(118, 75, 162, 0.2);
+  background: transparent;
+  color: #f5f5f5;
 }
 
 .register-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-glow);
-  color: white;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .logout-btn {
-  background: transparent;
-  color: #f56c6c;
-}
-
-.logout-btn:hover {
-  background: rgba(245, 108, 108, 0.1);
-  color: #f56c6c;
+  color: #f5f5f5;
 }
 
 /* Fix element plus routing style conflict */

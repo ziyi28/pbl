@@ -1,12 +1,12 @@
 <template>
   <div class="home-page">
     <div class="hero-section">
-      <h1 class="bounce-in">探索卓越校园体验</h1>
-      <p class="fade-in-up">参与、分享、发现属于你的高光时刻</p>
+      <h1>探索卓越校园体验</h1>
+      <p>参与、分享、发现属于你的高光时刻</p>
     </div>
 
     <!-- 筛选栏 -->
-    <div class="filter-bar glass-effect">
+    <div class="filter-bar">
       <div class="search-input-wrapper">
         <el-input
           v-model="keyword"
@@ -92,7 +92,7 @@ onMounted(() => loadEvents())
 <style scoped>
 .hero-section {
   text-align: center;
-  padding: 60px 0 50px;
+  padding: 100px 20px 80px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -101,41 +101,60 @@ onMounted(() => loadEvents())
 
 .hero-section h1 {
   font-size: 56px;
-  font-weight: 800;
-  letter-spacing: -1px;
-  margin-bottom: 16px;
-  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-secondary-light) 100%);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 24px;
+  color: #000;
+  background: linear-gradient(90deg, #000 0%, #333 50%, #000 100%);
+  background-size: 200% auto;
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-clip: text;
+  transition: all 0.3s ease;
+}
+
+.hero-section h1:hover {
+  animation: shimmerSweep 2s ease-in-out infinite;
+  transform: scale(1.02);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .hero-section p {
-  color: var(--c-text-light);
-  font-size: 20px;
-  font-weight: 500;
+  color: #666;
+  font-size: 18px;
+  font-weight: 400;
   max-width: 600px;
+  line-height: 1.6;
 }
 
 .filter-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 24px;
-  border-radius: var(--radius-lg);
+  justify-content: center;
+  gap: 32px; /* 和卡片之间的 gap (32px) 保持一致 */
+  padding: 16px 0;
+  border-radius: 8px;
   margin-bottom: 32px;
   flex-wrap: wrap;
+  width: 100%;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .search-input-wrapper {
-  flex: 1;
-  min-width: 280px;
+  flex: 1; /* 占据剩下的空间，配合另外两个固定宽度的框 */
+  min-width: 280px; /* 最小宽度和一张卡片一样 */
 }
 
 .filter-selectors {
   display: flex;
-  gap: 16px;
+  gap: 32px; /* 和卡片之间的 gap 保持一致 */
+  flex: 0 0 auto; /* 不让他自动伸缩了，固定大小 */
+}
+
+.custom-select {
+  width: 280px; /* 强制使其宽度与单张活动卡片的 min-width 一致 */
 }
 
 :deep(.custom-input .el-input__wrapper),
@@ -156,9 +175,11 @@ onMounted(() => loadEvents())
 
 .event-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 32px;
   min-height: 200px;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 .pagination {
@@ -177,30 +198,23 @@ onMounted(() => loadEvents())
 }
 
 /* Animations */
-.bounce-in {
-  animation: bounceIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.fade-in-up {
-  animation: fadeInUp 1s cubic-bezier(0.2, 0.8, 0.2, 1);
-  animation-fill-mode: both;
-  animation-delay: 0.2s;
-}
-
 .stagger-fade-in {
   animation: fadeInUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
   animation-fill-mode: both;
 }
 
-@keyframes bounceIn {
-  0% { transform: scale(0.9); opacity: 0; }
-  50% { transform: scale(1.02); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
 @keyframes fadeInUp {
   0% { transform: translateY(20px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
 }
 
 @media (max-width: 768px) {
