@@ -1,5 +1,5 @@
 <template>
-  <el-card shadow="never" class="event-card glass-effect" @click="$router.push(`/events/${event.id}`)" :body-style="{ padding: '0px' }">
+  <el-card shadow="never" class="event-card" @click="$router.push(`/events/${event.id}`)" :body-style="{ padding: '0px' }">
     <div class="card-cover-wrapper">
       <div class="card-cover" v-if="event.coverImage">
         <img :src="event.coverImage" :alt="event.title" />
@@ -8,7 +8,7 @@
         <el-icon :size="40"><Calendar /></el-icon>
       </div>
       <!-- Floating status badge over image -->
-      <el-tag class="status-badge" :type="statusType" effect="dark" size="small">{{ StatusMap[event.status] }}</el-tag>
+      <el-tag class="status-badge" :type="statusType" effect="plain" size="small">{{ StatusMap[event.status] }}</el-tag>
     </div>
     
     <div class="card-body">
@@ -57,19 +57,19 @@ function formatDate(dateStr: string) {
 <style scoped>
 .event-card {
   cursor: pointer;
-  border-radius: var(--radius-md) !important;
+  border-radius: 8px !important;
   overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+  border: 1px solid #d5d5d5 !important;
+  background: #ffffff !important;
 }
 
 .event-card:hover {
-  transform: translateY(-8px);
-  box-shadow: var(--shadow-lg) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
 }
 
 .event-card:hover .card-cover img {
-  transform: scale(1.08);
+  transform: scale(1.02);
 }
 
 .card-cover-wrapper {
@@ -111,11 +111,10 @@ function formatDate(dateStr: string) {
   position: absolute;
   top: 12px;
   right: 12px;
-  border-radius: 20px;
-  backdrop-filter: blur(4px);
+  border-radius: 6px;
   border: none;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .card-body {
@@ -129,7 +128,7 @@ function formatDate(dateStr: string) {
 .card-title {
   font-size: 18px;
   font-weight: 700;
-  color: var(--c-text);
+  color: #000000;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -139,7 +138,7 @@ function formatDate(dateStr: string) {
 }
 
 .card-meta {
-  color: var(--c-text-light);
+  color: #8e8e93;
   font-size: 13px;
   display: flex;
   flex-direction: column;
@@ -162,8 +161,11 @@ function formatDate(dateStr: string) {
 }
 
 .category-tag {
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 0 12px;
+  background-color: #f5f5f7 !important;
+  color: #000000 !important;
+  border: none !important;
 }
 
 .participants-info {

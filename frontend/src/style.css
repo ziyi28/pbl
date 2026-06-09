@@ -1,35 +1,35 @@
 :root {
-  /* Color Palette - Premium Purple/Indigo Theme */
-  --c-primary: #764ba2;
-  --c-primary-light: #667eea;
-  --c-primary-dark: #5a3782;
-  --c-secondary: #00f2fe;
-  --c-secondary-light: #4facfe;
+  /* Apple Monochrome Color Palette */
+  --c-primary: #000000;
+  --c-primary-light: #333333;
+  --c-primary-dark: #000000;
+  --c-secondary: #999999;
+  --c-secondary-light: #cccccc;
 
-  --c-surface: rgba(255, 255, 255, 0.75);
+  --c-surface: #ffffff;
   --c-surface-solid: #ffffff;
-  --c-bg: #f3f6fa;
-  --c-text: #2c3e50;
-  --c-text-light: #606266;
-  
-  --c-border: rgba(255, 255, 255, 0.5);
-  --c-glass-border: rgba(255, 255, 255, 0.3);
+  --c-bg: #f5f5f5;
+  --c-text: #000000;
+  --c-text-light: #666666;
+
+  --c-border: #e5e5e5;
+  --c-glass-border: #f0f0f0;
 
   /* Shadows */
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 8px 24px rgba(118, 75, 162, 0.1);
-  --shadow-lg: 0 16px 40px rgba(118, 75, 162, 0.15);
-  --shadow-glow: 0 0 20px rgba(118, 75, 162, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 0 rgba(0, 0, 0, 0);
 
   /* Radius */
   --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
 
   /* Typography */
-  --font-base: 'Inter', -apple-system, sans-serif;
-  --font-heading: 'Outfit', -apple-system, sans-serif;
+  --font-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
 
   /* Element Plus Global Overrides */
   --el-color-primary: var(--c-primary);
@@ -48,8 +48,8 @@
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
-  font-weight: 700;
-  color: var(--c-primary-dark);
+  font-weight: 600;
+  color: var(--c-text);
 }
 
 * {
@@ -61,15 +61,6 @@ h1, h2, h3, h4, h5, h6 {
 body {
   min-height: 100vh;
   background-color: var(--c-bg);
-  /* The Animated Gradient Mesh */
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(118, 75, 162, 0.1) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(102, 126, 234, 0.1) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(0, 242, 254, 0.1) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(79, 172, 254, 0.1) 0px, transparent 50%);
-  background-attachment: fixed;
-  background-size: cover;
-  background-repeat: no-repeat;
 }
 
 a {
@@ -82,57 +73,41 @@ a:hover {
   color: var(--c-primary-light);
 }
 
-/* Glassmorphism utility classes */
-.glass-effect {
-  background: var(--c-surface);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--c-glass-border);
-  box-shadow: var(--shadow-md);
-}
-
-/* Overriding some default Element Plus styles to fit Pro Max */
+/* Overriding some default Element Plus styles */
 .el-card {
   border: none !important;
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(12px) !important;
+  background: var(--c-surface) !important;
   border-radius: var(--radius-md) !important;
   box-shadow: var(--shadow-sm) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.3s ease !important;
 }
 
 .el-button {
   font-family: var(--font-base);
   font-weight: 500;
   border-radius: var(--radius-sm) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.3s ease !important;
 }
 
 .el-button--primary {
-  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-light) 100%) !important;
+  background: var(--c-primary) !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3);
+  color: white !important;
+  box-shadow: var(--shadow-sm);
 }
 
 .el-button--primary:hover {
-  box-shadow: var(--shadow-glow);
-  transform: translateY(-2px);
+  background: var(--c-primary-light) !important;
 }
 
 .el-input__wrapper {
   border-radius: var(--radius-sm) !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+  box-shadow: var(--shadow-sm) !important;
   transition: all 0.3s ease !important;
+  border: 1px solid var(--c-border) !important;
 }
 
 .el-input__wrapper.is-focus {
-  box-shadow: 0 0 0 2px var(--c-primary-light), var(--shadow-md) !important;
-}
-
-/* Fancy Gradient Text */
-.text-gradient {
-  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-secondary-light) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  box-shadow: 0 0 0 2px var(--c-primary), var(--shadow-md) !important;
+  border: 1px solid var(--c-primary) !important;
 }
