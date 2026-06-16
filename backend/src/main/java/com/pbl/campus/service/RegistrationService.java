@@ -51,11 +51,11 @@ public class RegistrationService {
             return Result.error("您已报名该活动");
         }
 
-        // 乐观锁更新名额
+        // 乐观锁更新名额（先到先得，冲突表示名额已被抢光）
         event.setCurrentParticipants(event.getCurrentParticipants() + 1);
         int rows = eventMapper.updateById(event);
         if (rows == 0) {
-            return Result.error("报名失败，请重试");
+            return Result.error("手慢了一步，名额已被抢光");
         }
 
         Registration registration = new Registration();
@@ -83,13 +83,15 @@ public class RegistrationService {
             return Result.error("您未报名该活动");
         }
 
-        registrationMapper.deleteById(registration.getId());
-
+        // 先使用乐观锁更新名额，成功后再删除报名记录，保证数据一致性
         event.setCurrentParticipants(event.getCurrentParticipants() - 1);
         int rows = eventMapper.updateById(event);
         if (rows == 0) {
-            return Result.error("取消失败，请重试");
+            // 乐观锁冲突时抛出 RuntimeException 触发事务回滚
+            throw new RuntimeException("取消报名并发冲突，请重试");
         }
+
+        registrationMapper.deleteById(registration.getId());
 
         return Result.success("已取消报名", null);
     }

@@ -46,7 +46,7 @@
                 show-word-limit
                 class="custom-textarea"
               />
-              <el-button type="primary" class="submit-comment-btn" @click="handleComment" :disabled="!commentContent.trim()">
+              <el-button type="primary" class="submit-comment-btn" @click="handleComment" :disabled="!commentContent.trim() || commentSubmitting" :loading="commentSubmitting">
                 发 送
               </el-button>
             </div>
@@ -175,7 +175,7 @@
               </template>
             </div>
             <div class="actions-guest" v-else>
-              <el-button type="primary" size="large" class="action-btn primary-action" @click="$router.push('/login')">
+              <el-button type="primary" size="large" class="action-btn primary-action" @click="$router.push({ path: '/login', query: { redirect: $route.fullPath } })">
                 登录后即可报名
               </el-button>
             </div>
@@ -207,6 +207,15 @@
         </div>
       </div>
     </template>
+
+    <!-- 活动不存在时的空状态 -->
+    <div v-else class="not-found">
+      <el-empty description="活动不存在或已被删除" :image-size="120">
+        <template #default>
+          <el-button type="primary" @click="$router.push('/')">返回首页</el-button>
+        </template>
+      </el-empty>
+    </div>
   </div>
 </template>
 
@@ -233,6 +242,7 @@ const comments = ref<Comment[]>([])
 const commentContent = ref('')
 const commentPage = ref(1)
 const commentTotal = ref(0)
+const commentSubmitting = ref(false)
 const likeLoading = ref<Record<number, boolean>>({})
 
 const isRegistered = ref(false)
@@ -336,13 +346,15 @@ async function handleDeleteEvent() {
 }
 
 async function handleComment() {
-  if (!commentContent.value.trim()) return
+  if (!commentContent.value.trim() || commentSubmitting.value) return
+  commentSubmitting.value = true
   try {
     await createComment(eventId, { content: commentContent.value })
     commentContent.value = ''
     ElMessage.success('评论成功')
     loadComments()
   } catch { /* error handled by interceptor */ }
+  commentSubmitting.value = false
 }
 
 async function handleDeleteComment(id: number) {
@@ -368,13 +380,23 @@ async function handleToggleLike(comment: Comment) {
 onMounted(() => {
   loadEvent()
   loadComments()
-  loadParticipants()
+  if (userStore.isLoggedIn) {
+    loadParticipants()
+  }
 })
 </script>
 
 <style scoped>
 .detail-page {
   width: 100%;
+}
+
+.not-found {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 60px 20px;
 }
 
 .hero-banner {

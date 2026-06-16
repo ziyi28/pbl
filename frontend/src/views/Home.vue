@@ -14,18 +14,18 @@
           :prefix-icon="Search"
           clearable
           class="custom-input"
-          @keyup.enter="loadEvents"
+          @keyup.enter="resetAndLoad"
         />
       </div>
       <div class="filter-selectors">
-        <el-select v-model="category" placeholder="全部分类" clearable class="custom-select" @change="loadEvents">
+        <el-select v-model="category" placeholder="全部分类" clearable class="custom-select" @change="resetAndLoad">
           <el-option label="讲座" value="LECTURE" />
           <el-option label="文体" value="SPORTS" />
           <el-option label="社团" value="CLUB" />
           <el-option label="志愿" value="VOLUNTEER" />
           <el-option label="其他" value="OTHER" />
         </el-select>
-        <el-select v-model="status" placeholder="所有状态" clearable class="custom-select" @change="loadEvents">
+        <el-select v-model="status" placeholder="所有状态" clearable class="custom-select" @change="resetAndLoad">
           <el-option label="报名中" value="OPEN" />
           <el-option label="进行中" value="ONGOING" />
           <el-option label="已结束" value="ENDED" />
@@ -68,6 +68,11 @@ const total = ref(0)
 const keyword = ref('')
 const category = ref<EventCategory | ''>('')
 const status = ref<EventStatus | ''>('')
+
+function resetAndLoad() {
+  page.value = 1
+  loadEvents()
+}
 
 async function loadEvents() {
   loading.value = true

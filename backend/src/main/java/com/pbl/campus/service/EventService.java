@@ -40,8 +40,8 @@ public class EventService {
         if (request.getEndTime().isBefore(request.getStartTime())) {
             return Result.error("结束时间必须晚于开始时间");
         }
-        if (request.getRegistrationDeadline().isAfter(request.getStartTime())) {
-            return Result.error("报名截止时间不能晚于开始时间");
+        if (!request.getRegistrationDeadline().isBefore(request.getStartTime())) {
+            return Result.error("报名截止时间必须早于开始时间");
         }
 
         Event event = new Event();
