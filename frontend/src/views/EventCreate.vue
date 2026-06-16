@@ -83,7 +83,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, type FormInstance } from 'element-plus'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { createEvent } from '../api/event'
 
 const router = useRouter()
@@ -102,14 +102,36 @@ const form = reactive({
   coverImage: '',
 })
 
-const rules = {
+const validateEndTime = (_rule: any, value: any, callback: any) => {
+  if (form.startTime && value && new Date(value) <= new Date(form.startTime)) {
+    callback(new Error('结束时间必须晚于开始时间'))
+  } else {
+    callback()
+  }
+}
+
+const validateRegistrationDeadline = (_rule: any, value: any, callback: any) => {
+  if (form.startTime && value && new Date(value) >= new Date(form.startTime)) {
+    callback(new Error('报名截止时间必须早于开始时间'))
+  } else {
+    callback()
+  }
+}
+
+const rules: FormRules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   description: [{ required: true, message: '请输入描述', trigger: 'blur' }],
   category: [{ required: true, message: '请选择分类', trigger: 'change' }],
   location: [{ required: true, message: '请输入地点', trigger: 'blur' }],
   startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
-  endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }],
-  registrationDeadline: [{ required: true, message: '请选择报名截止时间', trigger: 'change' }],
+  endTime: [
+    { required: true, message: '请选择结束时间', trigger: 'change' },
+    { validator: validateEndTime, trigger: 'change' },
+  ],
+  registrationDeadline: [
+    { required: true, message: '请选择报名截止时间', trigger: 'change' },
+    { validator: validateRegistrationDeadline, trigger: 'change' },
+  ],
   maxParticipants: [{ required: true, message: '请输入最大人数', trigger: 'change' }],
 }
 
