@@ -41,7 +41,12 @@ export interface Comment {
   username: string
   userAvatar: string | null
   eventId: number
+  parentId: number | null
   createdAt: string
+  likeCount: number
+  liked: boolean
+  replies: Comment[]
+  replyCount: number
 }
 
 // 统一响应类型

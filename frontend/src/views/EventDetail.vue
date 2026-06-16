@@ -75,6 +75,91 @@
                     </el-button>
                   </div>
                   <p class="comment-content">{{ comment.content }}</p>
+                  <div class="comment-actions">
+                    <el-button
+                      v-if="userStore.isLoggedIn"
+                      :icon="comment.liked ? 'HeartFilled' : 'Heart'"
+                      type="text"
+                      size="small"
+                      class="like-comment-btn"
+                      :class="{ liked: comment.liked }"
+                      @click="handleCommentLike(comment.id)"
+                    >
+                      {{ comment.likeCount }}
+                    </el-button>
+                    <span v-else class="like-count">{{ comment.likeCount }} 人点赞</span>
+                    
+                    <el-button
+                      v-if="userStore.isLoggedIn"
+                      type="text"
+                      size="small"
+                      class="reply-btn"
+                      @click="toggleReplyInput(comment.id)"
+                    >
+                      {{ expandedReplies[comment.id] ? '收起' : `回复(${comment.replyCount})` }}
+                    </el-button>
+                  </div>
+                  
+                  <!-- 回复输入框 -->
+                  <div v-if="expandedReplies[comment.id] && userStore.isLoggedIn" class="reply-form">
+                    <el-input
+                      v-model="replyContents[comment.id]"
+                      type="textarea"
+                      :rows="2"
+                      :placeholder="`回复 @${comment.username}...`"
+                      maxlength="500"
+                      show-word-limit
+                      class="reply-textarea"
+                    />
+                    <div class="reply-form-actions">
+                      <el-button size="small" @click="expandedReplies[comment.id] = false">取消</el-button>
+                      <el-button 
+                        type="primary" 
+                        size="small" 
+                        :disabled="!replyContents[comment.id]?.trim()"
+                        @click="handleReply(comment.id)"
+                      >
+                        发送
+                      </el-button>
+                    </div>
+                  </div>
+                  
+                  <!-- 回复列表 -->
+                  <div v-if="comment.replies && comment.replies.length > 0" class="reply-list">
+                    <div class="reply-item" v-for="reply in comment.replies" :key="reply.id">
+                      <div class="reply-avatar">
+                        <img v-if="reply.userAvatar" :src="reply.userAvatar" class="comment-avatar-img" :alt="reply.username" />
+                        <span v-else>{{ reply.username.charAt(0).toUpperCase() }}</span>
+                      </div>
+                      <div class="reply-body">
+                        <div class="reply-header">
+                          <span class="reply-user">{{ reply.username }}</span>
+                          <span class="reply-time">{{ formatDateTime(reply.createdAt) }}</span>
+                          <el-button
+                            v-if="userStore.isLoggedIn && (userStore.user?.id === reply.userId || userStore.isAdmin)"
+                            type="danger" text size="small" class="delete-reply-btn"
+                            @click="handleDeleteComment(reply.id)"
+                          >
+                            删除
+                          </el-button>
+                        </div>
+                        <p class="reply-content">{{ reply.content }}</p>
+                        <div class="reply-actions">
+                          <el-button
+                            v-if="userStore.isLoggedIn"
+                            :icon="reply.liked ? 'HeartFilled' : 'Heart'"
+                            type="text"
+                            size="small"
+                            class="like-comment-btn"
+                            :class="{ liked: reply.liked }"
+                            @click="handleReplyLike(comment.id, reply.id)"
+                          >
+                            {{ reply.likeCount }}
+                          </el-button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -178,7 +263,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Star, StarFilled, Location, Clock, Calendar, User } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getEvent, registerEvent, cancelRegistration, deleteEvent } from '../api/event'
-import { getComments, createComment, deleteComment } from '../api/comment'
+import { getComments, createComment, createReply, deleteComment, toggleCommentLike } from '../api/comment'
 import { addFavorite, removeFavorite } from '../api/favorite'
 import { useUserStore } from '../stores/user'
 import { CategoryMap, StatusMap } from '../types'
@@ -195,6 +280,8 @@ const comments = ref<Comment[]>([])
 const commentContent = ref('')
 const commentPage = ref(1)
 const commentTotal = ref(0)
+const replyContents = ref<Record<number, string>>({})
+const expandedReplies = ref<Record<number, boolean>>({})
 
 const isRegistered = ref(false)
 const isFavorited = ref(false)
@@ -306,6 +393,57 @@ async function handleDeleteComment(id: number) {
     await deleteComment(id)
     ElMessage.success('评论已删除')
     loadComments()
+  } catch { /* error handled by interceptor */ }
+}
+
+async function handleCommentLike(commentId: number) {
+  const comment = comments.value.find(c => c.id === commentId)
+  if (!comment) return
+  
+  try {
+    await toggleCommentLike(eventId, commentId)
+    if (comment.liked) {
+      comment.likeCount--
+      comment.liked = false
+    } else {
+      comment.likeCount++
+      comment.liked = true
+    }
+  } catch { /* error handled by interceptor */ }
+}
+
+function toggleReplyInput(commentId: number) {
+  expandedReplies.value[commentId] = !expandedReplies.value[commentId]
+}
+
+async function handleReply(parentCommentId: number) {
+  const content = replyContents.value[parentCommentId]
+  if (!content?.trim()) return
+  
+  try {
+    await createReply(eventId, parentCommentId, { content })
+    replyContents.value[parentCommentId] = ''
+    ElMessage.success('回复成功')
+    loadComments()
+  } catch { /* error handled by interceptor */ }
+}
+
+async function handleReplyLike(commentId: number, replyId: number) {
+  const comment = comments.value.find(c => c.id === commentId)
+  if (!comment?.replies) return
+  
+  const reply = comment.replies.find(r => r.id === replyId)
+  if (!reply) return
+  
+  try {
+    await toggleCommentLike(eventId, replyId)
+    if (reply.liked) {
+      reply.likeCount--
+      reply.liked = false
+    } else {
+      reply.likeCount++
+      reply.liked = true
+    }
   } catch { /* error handled by interceptor */ }
 }
 
@@ -605,6 +743,130 @@ onMounted(() => {
 .comment-content {
   color: var(--c-text);
   line-height: 1.6;
+}
+
+.comment-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.like-comment-btn {
+  color: var(--c-text-light);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  
+  &.liked {
+    color: var(--c-primary);
+  }
+  
+  &:hover {
+    color: var(--c-primary);
+  }
+}
+
+.like-count {
+  font-size: 12px;
+  color: var(--c-text-light);
+}
+
+.reply-btn {
+  margin-left: 16px;
+  color: var(--c-text-light);
+  font-size: 13px;
+  
+  &:hover {
+    color: var(--c-primary);
+  }
+}
+
+.reply-form {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: var(--radius-sm);
+}
+
+.reply-textarea {
+  margin-bottom: 12px;
+}
+
+.reply-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.reply-list {
+  margin-top: 20px;
+  padding-left: 20px;
+  border-left: 2px solid rgba(0, 0, 0, 0.08);
+}
+
+.reply-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.reply-avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--c-secondary-light) 0%, var(--c-primary-light) 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.reply-body {
+  flex: 1;
+}
+
+.reply-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.reply-user {
+  font-weight: 600;
+  color: var(--c-primary-dark);
+  font-size: 13px;
+}
+
+.reply-time {
+  font-size: 11px;
+  color: var(--c-text-light);
+}
+
+.delete-reply-btn {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.reply-content {
+  color: var(--c-text);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.reply-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
 }
 
 @media (max-width: 900px) {

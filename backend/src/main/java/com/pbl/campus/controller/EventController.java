@@ -84,8 +84,10 @@ public class EventController {
     public Result<PageResult<CommentResponse>> listComments(
             @PathVariable Long id,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return commentService.listComments(id, page, size);
+            @RequestParam(defaultValue = "20") int size,
+            Authentication authentication) {
+        Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
+        return commentService.listComments(id, userId, page, size);
     }
 
     @PostMapping("/{id}/comments")
@@ -94,6 +96,25 @@ public class EventController {
                                                   @Valid @RequestBody CommentCreateRequest request) {
         Long userId = (Long) authentication.getPrincipal();
         return commentService.createComment(userId, id, request);
+    }
+
+    @PostMapping("/{id}/comments/{commentId}/replies")
+    public Result<CommentResponse> createReply(Authentication authentication,
+                                                @PathVariable Long id,
+                                                @PathVariable Long commentId,
+                                                @Valid @RequestBody CommentCreateRequest request) {
+        Long userId = (Long) authentication.getPrincipal();
+        return commentService.createReply(userId, commentId, request);
+    }
+
+    // ========== 评论点赞 ==========
+
+    @PostMapping("/{id}/comments/{commentId}/likes")
+    public Result<Void> toggleCommentLike(Authentication authentication,
+                                           @PathVariable Long id,
+                                           @PathVariable Long commentId) {
+        Long userId = (Long) authentication.getPrincipal();
+        return commentService.toggleLike(commentId, userId);
     }
 
     // ========== 收藏 ==========

@@ -6,19 +6,15 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("comment")
-public class Comment {
+@TableName("comment_like")
+public class CommentLike {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private String content;
+    private Long commentId;
 
     private Long userId;
-
-    private Long eventId;
-
-    private Long parentId;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

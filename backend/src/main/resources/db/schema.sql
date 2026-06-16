@@ -62,10 +62,12 @@ CREATE TABLE IF NOT EXISTS `comment` (
     `content`    VARCHAR(500) NOT NULL COMMENT '评论内容',
     `user_id`    BIGINT       NOT NULL COMMENT '评论者 ID',
     `event_id`   BIGINT       NOT NULL COMMENT '活动 ID',
+    `parent_id`  BIGINT       NULL COMMENT '父评论 ID，NULL 表示顶级评论',
     `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '评论时间',
     PRIMARY KEY (`id`),
     KEY `idx_event_id` (`event_id`),
-    KEY `idx_user_id` (`user_id`)
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_parent_id` (`parent_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
 
 -- 收藏表
@@ -78,6 +80,18 @@ CREATE TABLE IF NOT EXISTS `favorite` (
     UNIQUE KEY `uk_user_event` (`user_id`, `event_id`),
     KEY `idx_event_id` (`event_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收藏表';
+
+-- 评论点赞表
+CREATE TABLE IF NOT EXISTS `comment_like` (
+    `id`          BIGINT   NOT NULL AUTO_INCREMENT COMMENT '点赞 ID',
+    `comment_id`  BIGINT   NOT NULL COMMENT '评论 ID',
+    `user_id`     BIGINT   NOT NULL COMMENT '用户 ID',
+    `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '点赞时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_comment_user` (`comment_id`, `user_id`),
+    KEY `idx_comment_id` (`comment_id`),
+    KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论点赞表';
 
 -- 插入默认管理员（密码: admin123，BCrypt 加密）
 INSERT INTO `user` (`username`, `password`, `email`, `role`)
