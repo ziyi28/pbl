@@ -1,129 +1,145 @@
 <template>
   <div class="profile-page">
-    <!-- Hero Header -->
-    <div class="profile-hero">
-      <div class="hero-bg-pattern"></div>
-      <div class="profile-header-content">
-        <!-- Avatar Section -->
-        <div class="avatar-section">
-          <div class="avatar-wrapper" @click="triggerAvatarUpload">
+    <!-- ── 用户信息区 ──────────────────── -->
+    <section class="profile-hero">
+      <div class="hero-content">
+        <!-- 头像 -->
+        <div class="avatar-section" @click="triggerAvatarUpload">
+          <div class="avatar-wrapper">
             <img v-if="userStore.user?.avatar" :src="userStore.user.avatar" class="avatar-img" alt="头像" />
             <div v-else class="avatar-placeholder">
               <span>{{ userStore.user?.username?.charAt(0)?.toUpperCase() }}</span>
             </div>
             <div class="avatar-overlay">
-              <el-icon :size="24"><Camera /></el-icon>
-              <span>更换头像</span>
+              <el-icon :size="20"><Camera /></el-icon>
             </div>
-            <input
-              ref="avatarInput"
-              type="file"
-              accept="image/*"
-              style="display: none"
-              @change="handleAvatarUpload"
-            />
           </div>
-          <div class="uploading-indicator" v-if="avatarUploading">
-            <el-icon class="is-loading" :size="16"><Loading /></el-icon>
-            <span>上传中…</span>
-          </div>
+          <input
+            ref="avatarInput"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            @change="handleAvatarUpload"
+          />
+          <span class="uploading-hint" v-if="avatarUploading">
+            <el-icon class="is-loading" :size="14"><Loading /></el-icon>
+            上传中…
+          </span>
         </div>
-        <!-- User Info -->
+
+        <!-- 用户元信息 -->
         <div class="user-meta">
           <h1 class="username-display">{{ userStore.user?.username }}</h1>
-          <p class="user-bio" v-if="userStore.user?.bio">{{ userStore.user.bio }}</p>
-          <p class="user-bio placeholder-bio" v-else>这个人很懒，还没有写简介…</p>
-          <div class="user-badges">
-            <el-tag :type="userStore.isAdmin ? 'danger' : 'primary'" effect="dark" round size="small">
-              {{ userStore.isAdmin ? '管理员' : '普通用户' }}
-            </el-tag>
+          <div class="meta-row">
+            <span class="role-badge" :class="{ 'is-admin': userStore.isAdmin }">
+              {{ userStore.isAdmin ? '管理员' : '用户' }}
+            </span>
             <span class="join-date">
-              <el-icon><Calendar /></el-icon>
+              <el-icon :size="14"><Calendar /></el-icon>
               加入于 {{ formatDate(userStore.user?.createdAt) }}
             </span>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Content Area -->
+    <!-- ── 主体双栏 ────────────────────── -->
     <div class="profile-body">
-      <!-- Sidebar: Edit Profile -->
-      <div class="profile-sidebar">
-        <el-card class="glass-effect edit-card">
+      <!-- 左侧：编辑资料 -->
+      <aside class="profile-sidebar">
+        <el-card class="edit-card" shadow="never">
           <template #header>
             <div class="card-header-row">
-              <el-icon><Edit /></el-icon>
-              <h3>编辑资料</h3>
+              <el-icon :size="16"><Edit /></el-icon>
+              <span>编辑资料</span>
             </div>
           </template>
           <el-form :model="profileForm" label-position="top" v-if="userStore.user">
             <el-form-item label="邮箱">
-              <el-input v-model="profileForm.email" placeholder="your@email.com" class="custom-input" />
+              <el-input
+                v-model="profileForm.email"
+                placeholder="your@email.com"
+                class="profile-input"
+              />
             </el-form-item>
             <el-form-item label="个人简介">
               <el-input
                 v-model="profileForm.bio"
                 type="textarea"
-                :rows="4"
-                placeholder="介绍一下你自己..."
+                :rows="5"
+                placeholder="介绍一下你自己…"
                 maxlength="200"
                 show-word-limit
-                class="custom-textarea"
+                class="profile-textarea"
               />
             </el-form-item>
-            <el-button type="primary" class="save-btn" @click="handleUpdateProfile" :loading="saving">
+            <el-button class="save-btn" @click="handleUpdateProfile" :loading="saving">
               保存修改
             </el-button>
           </el-form>
         </el-card>
-      </div>
+      </aside>
 
-      <!-- Main: Tabs -->
-      <div class="profile-main">
-        <el-card class="glass-effect tabs-card">
+      <!-- 右侧：报名 / 收藏 -->
+      <section class="profile-main">
+        <el-card class="tabs-card" shadow="never">
+          <!-- 胶囊标签 -->
           <div class="tabs-header">
-            <button
-              class="tab-btn"
-              :class="{ active: activeTab === 'registrations' }"
-              @click="switchTab('registrations')"
-            >
-              <el-icon><Ticket /></el-icon>
-              <span>我的报名</span>
-              <el-badge :value="regCount" :max="99" v-if="regCount > 0" class="tab-badge" />
-            </button>
-            <button
-              class="tab-btn"
-              :class="{ active: activeTab === 'favorites' }"
-              @click="switchTab('favorites')"
-            >
-              <el-icon><StarFilled /></el-icon>
-              <span>我的收藏</span>
-              <el-badge :value="favCount" :max="99" v-if="favCount > 0" class="tab-badge" />
-            </button>
+            <div class="pill-group">
+              <button
+                class="pill-tab"
+                :class="{ active: activeTab === 'registrations' }"
+                @click="switchTab('registrations')"
+              >
+                <el-icon :size="15"><Ticket /></el-icon>
+                <span>我的报名</span>
+                <span v-if="regCount > 0" class="pill-count">{{ regCount }}</span>
+              </button>
+              <button
+                class="pill-tab"
+                :class="{ active: activeTab === 'favorites' }"
+                @click="switchTab('favorites')"
+              >
+                <el-icon :size="15"><StarFilled /></el-icon>
+                <span>我的收藏</span>
+                <span v-if="favCount > 0" class="pill-count">{{ favCount }}</span>
+              </button>
+            </div>
           </div>
 
+          <!-- 内容区 -->
           <div class="tab-content" v-loading="listLoading">
-            <transition-group name="card-list" tag="div" class="event-grid" v-if="myEvents.length > 0">
+            <transition-group
+              name="card-list"
+              tag="div"
+              class="event-grid"
+              v-if="myEvents.length > 0"
+            >
               <EventCard
                 v-for="(event, index) in myEvents"
                 :key="event.id"
                 :event="event"
-                :style="{ animationDelay: `${index * 0.08}s` }"
+                :style="{ animationDelay: `${index * 0.06}s` }"
                 class="stagger-fade-in"
               />
             </transition-group>
-            <el-empty v-else :description="activeTab === 'registrations' ? '暂无报名记录' : '暂无收藏'" :image-size="120">
-              <template #description>
-                <p class="empty-desc">{{ activeTab === 'registrations' ? '去活动大厅看看有什么感兴趣的吧！' : '收藏你喜欢的活动，方便随时查看' }}</p>
-              </template>
-              <el-button type="primary" class="explore-btn" @click="$router.push('/')">
-                探索活动
-              </el-button>
-            </el-empty>
+
+            <!-- 空状态 —— 线性图标 + 引导 -->
+            <div class="empty-state" v-else>
+              <el-icon :size="44" class="empty-icon"><Calendar /></el-icon>
+              <p class="empty-text">
+                {{ activeTab === 'registrations' ? '还没有报名任何活动' : '还没有收藏任何活动' }}
+              </p>
+              <p class="empty-hint">
+                {{ activeTab === 'registrations'
+                    ? '去活动大厅发现感兴趣的活动吧'
+                    : '收藏喜欢的活动，方便随时查看' }}
+              </p>
+              <button class="empty-action" @click="$router.push('/')">探索活动</button>
+            </div>
           </div>
         </el-card>
-      </div>
+      </section>
     </div>
   </div>
 </template>
@@ -158,7 +174,11 @@ const favCount = ref(0)
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+  return new Date(dateStr).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 }
 
 function triggerAvatarUpload() {
@@ -170,9 +190,9 @@ async function handleAvatarUpload(e: Event) {
   const file = target.files?.[0]
   if (!file) return
 
-  const validationMessage = validateImageFile(file)
-  if (validationMessage) {
-    ElMessage.error(validationMessage)
+  const msg = validateImageFile(file)
+  if (msg) {
+    ElMessage.error(msg)
     if (target) target.value = ''
     return
   }
@@ -198,7 +218,7 @@ async function handleUpdateProfile() {
     ElMessage.success('信息已更新')
     await userStore.fetchUser()
   } catch {
-    /* error handled by interceptor */
+    /* interceptor handles */
   } finally {
     saving.value = false
   }
@@ -238,75 +258,55 @@ onMounted(async () => {
     profileForm.email = userStore.user.email || ''
     profileForm.bio = userStore.user.bio || ''
   }
-  // 并行加载两个列表的计数
   loadRegistrations()
-  getMyFavorites().then(res => { favCount.value = res.data.length })
+  getMyFavorites().then((res) => {
+    favCount.value = res.data.length
+  })
 })
 </script>
 
 <style scoped>
-/* ========== Hero Section ========== */
+/* ================================================
+   Hero —— 深色纯色背景
+   ================================================ */
 .profile-hero {
-  margin: -100px -20px 0;
-  padding-top: 100px;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
-  min-height: 320px;
-  display: flex;
-  align-items: flex-end;
+  margin: -80px -20px 0;
+  padding-top: 80px;
+  background: #18181B;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.hero-bg-pattern {
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(118, 75, 162, 0.25) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(99, 179, 237, 0.2) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 50%);
-  animation: heroShift 12s ease-in-out infinite alternate;
-}
-
-@keyframes heroShift {
-  0% { transform: scale(1) translateX(0); }
-  100% { transform: scale(1.05) translateX(-2%); }
-}
-
-.profile-header-content {
-  position: relative;
-  z-index: 2;
-  max-width: 1200px;
-  width: 100%;
+.hero-content {
+  max-width: 960px;
   margin: 0 auto;
-  padding: 40px 20px 48px;
+  padding: 32px 20px 36px;
   display: flex;
-  align-items: flex-end;
-  gap: 32px;
+  align-items: center;
+  gap: 24px;
 }
 
-/* ========== Avatar ========== */
+/* ── 头像 ────────────────────────────── */
 .avatar-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .avatar-wrapper {
-  width: 120px;
-  height: 120px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   position: relative;
   cursor: pointer;
-  border: 4px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.2s ease;
 }
 
 .avatar-wrapper:hover {
-  border-color: var(--c-primary-light);
-  transform: scale(1.05);
+  border-color: var(--c-primary);
 }
 
 .avatar-wrapper:hover .avatar-overlay {
@@ -325,94 +325,97 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-secondary-light) 100%);
-  color: white;
-  font-size: 48px;
-  font-weight: 800;
+  background: #B45309;
+  color: #FFFFFF;
+  font-size: 36px;
+  font-weight: 700;
   font-family: var(--font-heading);
 }
 
 .avatar-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.3s ease;
-  color: white;
-  gap: 4px;
-  font-size: 12px;
+  transition: opacity 0.2s ease;
+  color: #FFFFFF;
 }
 
-.uploading-indicator {
+.uploading-hint {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 13px;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-/* ========== User Meta ========== */
+/* ── 用户元信息 ──────────────────────── */
 .user-meta {
-  flex: 1;
-  padding-bottom: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .username-display {
-  font-size: 36px;
-  font-weight: 800;
-  color: #fff;
+  font-size: 26px;
+  font-weight: 700;
+  color: #FFFFFF;
   font-family: var(--font-heading);
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  margin-bottom: 8px;
+  letter-spacing: -0.2px;
+  line-height: 1.2;
 }
 
-.user-bio {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 15px;
-  line-height: 1.6;
-  margin-bottom: 16px;
-  max-width: 500px;
-}
-
-.placeholder-bio {
-  font-style: italic;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.user-badges {
+.meta-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
+/* 角色徽章 —— 小药丸 */
+.role-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+  background: rgba(255, 255, 255, 0.1);
+  color: #A1A1AA;
+}
+
+.role-badge.is-admin {
+  background: #FFF7ED;
+  color: #B45309;
+}
+
+/* 加入时间 */
 .join-date {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
+  color: #A1A1AA;
 }
 
-/* ========== Body Layout ========== */
+/* ================================================
+   Body —— 双栏布局
+   ================================================ */
 .profile-body {
-  max-width: 1200px;
-  margin: -24px auto 40px;
-  position: relative;
-  z-index: 10;
-  display: flex;
-  gap: 28px;
-  align-items: flex-start;
+  max-width: 960px;
+  margin: 24px auto 40px;
   padding: 0 20px;
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
 }
 
 .profile-sidebar {
-  width: 320px;
-  position: sticky;
-  top: 100px;
+  width: 230px;
+  flex-shrink: 0;
 }
 
 .profile-main {
@@ -420,160 +423,271 @@ onMounted(async () => {
   min-width: 0;
 }
 
-/* ========== Edit Card ========== */
+/* ================================================
+   左侧编辑资料卡片
+   ================================================ */
 .edit-card {
-  padding: 24px;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--c-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.edit-card :deep(.el-card__header) {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--c-border-light);
+}
+
+.edit-card :deep(.el-card__body) {
+  padding: 18px;
 }
 
 .card-header-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-family: var(--font-heading);
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text);
 }
 
-.card-header-row h3 {
-  font-size: 18px;
-  margin: 0;
+/* 统一输入框样式 */
+:deep(.profile-input .el-input__wrapper),
+:deep(.profile-textarea .el-textarea__inner) {
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--c-border) !important;
+  box-shadow: none !important;
+  background: #FAFAFA;
+  font-size: 13px;
+  color: var(--c-text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-:deep(.custom-input .el-input__wrapper),
-:deep(.custom-textarea .el-textarea__inner) {
-  border-radius: var(--radius-md) !important;
-  background: rgba(255, 255, 255, 0.6);
+:deep(.profile-input .el-input__wrapper.is-focus),
+:deep(.profile-textarea .el-textarea__inner:focus) {
+  border-color: var(--c-primary) !important;
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.1) !important;
 }
 
+:deep(.profile-input .el-input__wrapper .el-input__inner::placeholder),
+:deep(.profile-textarea .el-textarea__inner::placeholder) {
+  color: #C4C4C8;
+}
+
+:deep(.profile-textarea .el-textarea__inner) {
+  resize: none;
+  line-height: 1.6;
+}
+
+/* 保存按钮 —— 强调色 */
 .save-btn {
   width: 100%;
-  height: 44px;
-  border-radius: var(--radius-md) !important;
-  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-light) 100%) !important;
+  height: 38px;
+  border-radius: var(--radius-sm) !important;
+  background: #B45309 !important;
   border: none !important;
+  color: #FFFFFF !important;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 13px;
+  margin-top: 4px;
+  transition: background 0.2s ease;
 }
 
-/* ========== Tabs Card ========== */
+.save-btn:hover {
+  background: #D97742 !important;
+}
+
+/* ================================================
+   右侧选项卡卡片
+   ================================================ */
 .tabs-card {
-  padding: 0;
-  overflow: hidden;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--c-border) !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
+.tabs-card :deep(.el-card__body) {
+  padding: 0;
+}
+
+/* ── 胶囊标签组 ──────────────────────── */
 .tabs-header {
   display: flex;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(255, 255, 255, 0.4);
+  justify-content: center;
+  padding: 16px 20px 0;
+  border-bottom: none;
 }
 
-.tab-btn {
-  flex: 1;
+.pill-group {
+  display: inline-flex;
+  background: #F4F4F5;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.pill-tab {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 18px 16px;
+  gap: 6px;
+  padding: 7px 18px;
   border: none;
-  background: none;
+  background: transparent;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--c-text-light);
-  position: relative;
-  transition: all 0.3s ease;
+  color: #71717A;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-family: var(--font-base);
+  white-space: nowrap;
 }
 
-.tab-btn:hover {
-  color: var(--c-primary);
-  background: rgba(118, 75, 162, 0.04);
+.pill-tab .el-icon {
+  color: #A1A1AA;
+  transition: color 0.2s ease;
 }
 
-.tab-btn.active {
-  color: var(--c-primary);
+.pill-tab:hover {
+  color: #52525B;
+}
+
+.pill-tab.active {
+  background: #18181B;
+  color: #FFFFFF;
+}
+
+.pill-tab.active .el-icon {
+  color: #FFFFFF;
+}
+
+.pill-count {
+  font-size: 11px;
   font-weight: 600;
+  background: rgba(255, 255, 255, 0.15);
+  color: inherit;
+  padding: 1px 6px;
+  border-radius: 8px;
+  line-height: 1.5;
 }
 
-.tab-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 20%;
-  right: 20%;
-  height: 3px;
-  background: linear-gradient(90deg, var(--c-primary) 0%, var(--c-primary-light) 100%);
-  border-radius: 3px 3px 0 0;
+.pill-tab:not(.active) .pill-count {
+  background: #E4E4E7;
+  color: #71717A;
 }
 
-.tab-badge {
-  margin-left: 4px;
-}
-
+/* ── 内容区 ──────────────────────────── */
 .tab-content {
-  padding: 24px;
-  min-height: 300px;
+  padding: 20px 24px 24px;
+  min-height: 360px;
 }
 
-/* ========== Event Grid ========== */
+/* ── 活动卡片网格 ────────────────────── */
 .event-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 20px;
 }
 
 .stagger-fade-in {
-  animation: fadeInUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   animation-fill-mode: both;
 }
 
 @keyframes fadeInUp {
-  0% { transform: translateY(20px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
+  0%   { transform: translateY(12px); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
 }
 
-.empty-desc {
-  color: var(--c-text-light);
+/* ── 空状态 ──────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  text-align: center;
+}
+
+.empty-icon {
+  color: #D4D4D8;
   margin-bottom: 16px;
 }
 
-.explore-btn {
-  border-radius: var(--radius-md) !important;
-  background: linear-gradient(135deg, var(--c-primary), var(--c-primary-light)) !important;
-  border: none !important;
+.empty-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: #71717A;
+  margin-bottom: 6px;
 }
 
-/* ========== Transition ========== */
+.empty-hint {
+  font-size: 13px;
+  color: #A1A1AA;
+  margin-bottom: 20px;
+}
+
+.empty-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 22px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #B45309;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-base);
+  transition: background 0.2s ease;
+}
+
+.empty-action:hover {
+  background: #D97742;
+}
+
+/* ── 列表过渡 ────────────────────────── */
 .card-list-enter-active,
 .card-list-leave-active {
-  transition: all 0.4s ease;
+  transition: all 0.3s ease;
 }
 .card-list-enter-from,
 .card-list-leave-to {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(10px);
 }
 
-/* ========== Responsive ========== */
-@media (max-width: 900px) {
-  .profile-body {
+/* ================================================
+   响应式
+   ================================================ */
+@media (max-width: 768px) {
+  .hero-content {
     flex-direction: column;
-  }
-  .profile-sidebar {
-    width: 100%;
-    position: static;
-  }
-  .profile-header-content {
-    flex-direction: column;
-    align-items: center;
     text-align: center;
+    gap: 16px;
+    padding: 24px 20px 28px;
   }
-  .username-display {
-    font-size: 28px;
-  }
-  .user-badges {
+
+  .meta-row {
     justify-content: center;
   }
-  .user-bio {
-    margin-left: auto;
-    margin-right: auto;
+
+  .username-display {
+    font-size: 22px;
+  }
+
+  .profile-body {
+    flex-direction: column;
+    padding: 0 16px;
+  }
+
+  .profile-sidebar {
+    width: 100%;
+  }
+
+  .event-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

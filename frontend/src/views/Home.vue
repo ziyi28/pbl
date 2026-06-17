@@ -1,50 +1,70 @@
 <template>
   <div class="home-page">
-    <div class="hero-section">
-      <h1>探索卓越校园体验</h1>
-      <p>参与、分享、发现属于你的高光时刻</p>
-    </div>
+    <!-- Hero -->
+    <section class="hero-section">
+      <h1>探索校园活动</h1>
+      <p>参与、发现、分享属于你的高光时刻</p>
+    </section>
 
-    <!-- 筛选栏 -->
+    <!-- 搜索筛选栏 -->
     <div class="filter-bar">
       <div class="search-input-wrapper">
         <el-input
           v-model="keyword"
-          placeholder="探索你感兴趣的活动..."
+          placeholder="搜索你感兴趣的活动…"
           :prefix-icon="Search"
           clearable
-          class="custom-input"
+          class="filter-input"
           @keyup.enter="resetAndLoad"
         />
       </div>
-      <div class="filter-selectors">
-        <el-select v-model="category" placeholder="全部分类" clearable class="custom-select" @change="resetAndLoad">
-          <el-option label="讲座" value="LECTURE" />
-          <el-option label="文体" value="SPORTS" />
-          <el-option label="社团" value="CLUB" />
-          <el-option label="志愿" value="VOLUNTEER" />
-          <el-option label="其他" value="OTHER" />
-        </el-select>
-        <el-select v-model="status" placeholder="所有状态" clearable class="custom-select" @change="resetAndLoad">
-          <el-option label="报名中" value="OPEN" />
-          <el-option label="进行中" value="ONGOING" />
-          <el-option label="已结束" value="ENDED" />
-        </el-select>
-      </div>
+      <el-select
+        v-model="category"
+        placeholder="全部分类"
+        clearable
+        class="filter-select"
+        @change="resetAndLoad"
+      >
+        <el-option label="讲座" value="LECTURE" />
+        <el-option label="文体" value="SPORTS" />
+        <el-option label="社团" value="CLUB" />
+        <el-option label="志愿" value="VOLUNTEER" />
+        <el-option label="其他" value="OTHER" />
+      </el-select>
+      <el-select
+        v-model="status"
+        placeholder="所有状态"
+        clearable
+        class="filter-select"
+        @change="resetAndLoad"
+      >
+        <el-option label="报名中" value="OPEN" />
+        <el-option label="进行中" value="ONGOING" />
+        <el-option label="已结束" value="ENDED" />
+      </el-select>
     </div>
 
-    <!-- 活动列表 -->
+    <!-- 活动卡片网格 -->
     <div class="event-grid" v-loading="loading">
-      <EventCard v-for="(event, index) in events" :key="event.id" :event="event" :style="{ animationDelay: `${index * 0.1}s` }" class="stagger-fade-in" />
+      <EventCard
+        v-for="(event, index) in events"
+        :key="event.id"
+        :event="event"
+        :style="{ animationDelay: `${index * 0.06}s` }"
+        class="stagger-fade-in"
+      />
     </div>
 
-    <el-empty v-if="!loading && events.length === 0" description="在这片荒原中，暂时没有发现活动的踪迹" />
+    <el-empty
+      v-if="!loading && events.length === 0"
+      description="暂未发现活动，换个关键词试试"
+    />
 
     <!-- 分页 -->
     <div class="pagination" v-if="total > 0">
       <el-pagination
         v-model:current-page="page"
-        :page-size="10"
+        :page-size="9"
         :total="total"
         layout="prev, pager, next"
         @current-change="loadEvents"
@@ -79,7 +99,7 @@ async function loadEvents() {
   try {
     const res = await getEvents({
       page: page.value,
-      size: 10,
+      size: 9,
       keyword: keyword.value || undefined,
       category: (category.value || undefined) as EventCategory | undefined,
       status: (status.value || undefined) as EventStatus | undefined,
@@ -95,137 +115,129 @@ onMounted(() => loadEvents())
 </script>
 
 <style scoped>
+/* ── Hero ────────────────────────────── */
 .hero-section {
   text-align: center;
-  padding: 100px 20px 80px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  padding: 48px 20px 28px;
+  margin-top: 56px; /* navbar height */
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border-light);
 }
 
 .hero-section h1 {
-  font-size: 56px;
+  font-size: 30px;
   font-weight: 700;
-  letter-spacing: -0.5px;
-  margin-bottom: 24px;
-  color: #000;
-  background: linear-gradient(90deg, #000 0%, #333 50%, #000 100%);
-  background-size: 200% auto;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  transition: all 0.3s ease;
-}
-
-.hero-section h1:hover {
-  animation: shimmerSweep 2s ease-in-out infinite;
-  transform: scale(1.02);
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  color: var(--c-text);
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
 }
 
 .hero-section p {
-  color: #666;
-  font-size: 18px;
+  color: var(--c-text-light);
+  font-size: 15px;
   font-weight: 400;
-  max-width: 600px;
-  line-height: 1.6;
 }
 
+/* ── 筛选栏 ──────────────────────────── */
 .filter-bar {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 32px; /* 和卡片之间的 gap (32px) 保持一致 */
-  padding: 16px 0;
-  border-radius: 8px;
-  margin-bottom: 32px;
-  flex-wrap: wrap;
-  width: 100%;
-  max-width: 1000px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.search-input-wrapper {
-  flex: 1; /* 占据剩下的空间，配合另外两个固定宽度的框 */
-  min-width: 280px; /* 最小宽度和一张卡片一样 */
-}
-
-.filter-selectors {
-  display: flex;
-  gap: 32px; /* 和卡片之间的 gap 保持一致 */
-  flex: 0 0 auto; /* 不让他自动伸缩了，固定大小 */
-}
-
-.custom-select {
-  width: 280px; /* 强制使其宽度与单张活动卡片的 min-width 一致 */
-}
-
-:deep(.custom-input .el-input__wrapper),
-:deep(.custom-select .el-input__wrapper) {
-  height: 48px;
-  border-radius: var(--radius-md) !important;
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: none !important;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-:deep(.custom-input .el-input__wrapper.is-focus),
-:deep(.custom-select .el-input__wrapper.is-focus) {
-  background: #fff;
-  border-color: var(--c-primary-light);
-  box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1) !important;
-}
-
-.event-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 32px;
-  min-height: 200px;
-  max-width: 1000px;
+  gap: 12px;
+  padding: 20px 0 28px;
+  max-width: 960px;
   margin: 0 auto;
 }
 
+.search-input-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-select {
+  width: 140px;
+  flex: 0 0 auto;
+}
+
+/* 统一三个控件的高度、边框、圆角 */
+:deep(.filter-input .el-input__wrapper),
+:deep(.filter-select .el-input__wrapper) {
+  height: 44px;
+  border-radius: var(--radius-sm) !important;
+  background: var(--c-surface);
+  box-shadow: none !important;
+  border: 1px solid var(--c-border) !important;
+}
+
+:deep(.filter-input .el-input__wrapper.is-focus),
+:deep(.filter-select .el-input__wrapper.is-focus) {
+  border-color: var(--c-primary) !important;
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.1) !important;
+}
+
+:deep(.filter-input .el-input__prefix),
+:deep(.filter-select .el-input__prefix) {
+  color: var(--c-text-muted);
+}
+
+/* ── 卡片网格 ────────────────────────── */
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  min-height: 200px;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 0 24px;
+}
+
+/* ── 分页 ────────────────────────────── */
 .pagination {
   display: flex;
   justify-content: center;
-  margin-top: 40px;
-  padding-bottom: 20px;
+  padding: 16px 0 40px;
 }
 
-:deep(.el-pagination.is-background .el-pager li) {
-  border-radius: 8px;
-}
-
-:deep(.el-pagination.is-background .el-pager li.is-active) {
-  background-color: var(--c-primary);
-}
-
-/* Animations */
+/* ── 动画 ────────────────────────────── */
 .stagger-fade-in {
-  animation: fadeInUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   animation-fill-mode: both;
 }
 
 @keyframes fadeInUp {
-  0% { transform: translateY(20px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
+  0%   { transform: translateY(12px); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
 }
 
-@keyframes shimmerSweep {
-  0% {
-    background-position: -1000px 0;
+/* ── 响应式 ──────────────────────────── */
+@media (max-width: 900px) {
+  .event-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0 16px;
   }
-  100% {
-    background-position: 1000px 0;
+
+  .filter-bar {
+    padding: 20px 16px 24px;
   }
 }
 
-@media (max-width: 768px) {
-  .hero-section h1 { font-size: 36px; }
-  .filter-bar { flex-direction: column; align-items: stretch; }
-  .filter-selectors { width: 100%; justify-content: space-between; }
-  .custom-select { flex: 1; }
+@media (max-width: 640px) {
+  .event-grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+
+  .hero-section h1 {
+    font-size: 24px;
+  }
 }
 </style>

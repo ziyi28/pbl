@@ -67,14 +67,18 @@ public class EventController {
                                              @Parameter(description = "活动ID") @PathVariable Long id,
                                              @Valid @RequestBody EventUpdateRequest request) {
         Long userId = (Long) authentication.getPrincipal();
-        return eventService.updateEvent(id, userId, request);
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return eventService.updateEvent(id, userId, isAdmin, request);
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除活动", description = "管理员删除活动")
     public Result<Void> deleteEvent(Authentication authentication, @Parameter(description = "活动ID") @PathVariable Long id) {
         Long userId = (Long) authentication.getPrincipal();
-        return eventService.deleteEvent(id, userId);
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return eventService.deleteEvent(id, userId, isAdmin);
     }
 
     @PostMapping("/{id}/registrations")
