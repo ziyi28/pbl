@@ -100,12 +100,12 @@ public class EventService {
         return Result.success(result);
     }
 
-    public Result<EventResponse> updateEvent(Long id, Long userId, EventUpdateRequest request) {
+    public Result<EventResponse> updateEvent(Long id, Long userId, boolean isAdmin, EventUpdateRequest request) {
         Event event = eventMapper.selectById(id);
         if (event == null || event.getIsDeleted()) {
             return Result.error(404, "活动不存在");
         }
-        if (!event.getCreatorId().equals(userId)) {
+        if (!isAdmin && !event.getCreatorId().equals(userId)) {
             return Result.error(403, "无权编辑该活动");
         }
         if (event.getStatus() == EventStatus.ENDED) {
@@ -143,12 +143,12 @@ public class EventService {
         return Result.success("活动更新成功", toResponse(event));
     }
 
-    public Result<Void> deleteEvent(Long id, Long userId) {
+    public Result<Void> deleteEvent(Long id, Long userId, boolean isAdmin) {
         Event event = eventMapper.selectById(id);
         if (event == null || event.getIsDeleted()) {
             return Result.error(404, "活动不存在");
         }
-        if (!event.getCreatorId().equals(userId)) {
+        if (!isAdmin && !event.getCreatorId().equals(userId)) {
             return Result.error(403, "无权删除该活动");
         }
         eventMapper.deleteById(id);

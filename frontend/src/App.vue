@@ -35,8 +35,8 @@ onMounted(() => {
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  /* Add padding-top to account for the fixed glass navbar (60px + 30px spacing) */
-  padding: 100px 20px 40px;
+  /* navbar height 56px + 24px breathing room */
+  padding: 80px 20px 40px;
   min-height: 100vh;
   position: relative;
   z-index: 1;
