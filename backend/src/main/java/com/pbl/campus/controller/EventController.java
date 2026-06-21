@@ -36,14 +36,16 @@ public class EventController {
     private final FavoriteService favoriteService;
 
     @GetMapping
-    @Operation(summary = "查询活动列表", description = "分页查询活动列表，支持分类、状态、关键词筛选")
+    @Operation(summary = "查询活动列表", description = "分页查询活动列表，支持分类、状态、关键词筛选。登录时返回当前用户的报名/收藏状态。")
     public Result<PageResult<EventResponse>> listEvents(
             @Parameter(description = "页码，默认1") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页大小，默认10") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "活动分类") @RequestParam(required = false) EventCategory category,
             @Parameter(description = "活动状态") @RequestParam(required = false) EventStatus status,
-            @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword) {
-        return eventService.listEvents(page, size, category, status, keyword);
+            @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword,
+            Authentication authentication) {
+        Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
+        return eventService.listEvents(page, size, category, status, keyword, userId);
     }
 
     @GetMapping("/{id}")

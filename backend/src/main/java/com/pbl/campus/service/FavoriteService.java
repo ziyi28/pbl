@@ -5,8 +5,10 @@ import com.pbl.campus.common.Result;
 import com.pbl.campus.dto.response.EventResponse;
 import com.pbl.campus.entity.Event;
 import com.pbl.campus.entity.Favorite;
+import com.pbl.campus.entity.User;
 import com.pbl.campus.mapper.EventMapper;
 import com.pbl.campus.mapper.FavoriteMapper;
+import com.pbl.campus.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ public class FavoriteService {
 
     private final FavoriteMapper favoriteMapper;
     private final EventMapper eventMapper;
+    private final UserMapper userMapper;
 
     public Result<Void> addFavorite(Long userId, Long eventId) {
         Event event = eventMapper.selectById(eventId);
@@ -70,6 +73,10 @@ public class FavoriteService {
                     if (event == null || event.getIsDeleted()) return null;
                     EventResponse response = new EventResponse();
                     BeanUtils.copyProperties(event, response);
+                    User creator = userMapper.selectById(event.getCreatorId());
+                    if (creator != null) {
+                        response.setCreatorName(creator.getUsername());
+                    }
                     return response;
                 })
                 .filter(e -> e != null)

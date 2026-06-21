@@ -1,27 +1,33 @@
 <template>
   <div class="detail-page" v-loading="loading">
     <template v-if="event">
-      <!-- ═══ Hero ══════════════════════════════ -->
-      <section class="hero-banner" :style="bannerStyle">
-        <div class="hero-overlay">
-          <div class="hero-content">
-            <button class="back-link" @click="$router.back()">
-              <el-icon :size="16"><ArrowLeft /></el-icon>
-              <span>返回</span>
-            </button>
-            <h1 class="hero-title">{{ event.title }}</h1>
-            <div class="hero-pills">
-              <span class="hero-pill">{{ CategoryMap[event.category] }}</span>
-              <span class="hero-pill">发起人：{{ event.creatorName }}</span>
-            </div>
+      <!-- ═══ 顶部信息栏 ═══════════════════ -->
+      <section class="detail-hero">
+        <div class="hero-body">
+          <button class="back-link" @click="$router.back()">
+            <el-icon :size="16"><ArrowLeft /></el-icon>
+            <span>返回</span>
+          </button>
+          <h1 class="hero-title">{{ event.title }}</h1>
+          <div class="hero-meta">
+            <span class="hero-tag">{{ CategoryLabels[event.category] || event.category }}</span>
+            <span class="hero-tag hero-tag-status" :class="statusClass">
+              {{ statusLabel }}
+            </span>
+            <span class="hero-creator">发起人：{{ event.creatorName }}</span>
           </div>
         </div>
       </section>
 
-      <!-- ═══ 主体双栏 ══════════════════════════ -->
+      <!-- ═══ 主体双栏 ═══════════════════════ -->
       <div class="detail-body">
-        <!-- 左栏 -->
+        <!-- 左栏：封面 + 正文 + 评论区 -->
         <div class="main-col">
+          <!-- 封面图 -->
+          <div v-if="event.coverImage" class="cover-section">
+            <img :src="event.coverImage" :alt="event.title" class="cover-image" />
+          </div>
+
           <!-- 活动详情 -->
           <el-card class="content-card" shadow="never">
             <h3 class="card-heading">活动详情</h3>
@@ -30,31 +36,48 @@
 
           <!-- 讨论区 -->
           <el-card class="content-card" shadow="never">
-            <h3 class="card-heading">讨论区</h3>
+            <h3 class="card-heading">讨论区{{ comments.length > 0 ? ` · ${commentTotal}` : '' }}</h3>
 
-            <!-- 发表评论 -->
-            <div class="comment-form" v-if="userStore.isLoggedIn">
-              <el-input
-                v-model="commentContent"
-                type="textarea"
-                :rows="3"
-                placeholder="发表你的看法…"
-                maxlength="500"
-                show-word-limit
-                class="comment-textarea"
-              />
-              <div class="comment-form-actions">
-                <button
-                  class="comment-submit"
-                  :disabled="!commentContent.trim() || commentSubmitting"
-                  @click="handleComment"
-                >
-                  发送
-                </button>
+            <!-- 评论输入 / 提示 -->
+            <div class="comment-input-area">
+              <!-- 未登录 -->
+              <div v-if="!userStore.isLoggedIn" class="comment-hint">
+                <el-icon :size="16"><ChatLineSquare /></el-icon>
+                <span>请 <router-link to="/login">登录</router-link> 后参与讨论</span>
               </div>
-            </div>
-            <div class="comment-login-hint" v-else>
-              请 <router-link to="/login">登录</router-link> 后参与讨论
+
+              <!-- 已登录但未报名 -->
+              <div v-else-if="!event.isRegistered && event.status !== 'ENDED'" class="comment-hint">
+                <el-icon :size="16"><ChatLineSquare /></el-icon>
+                <span>报名活动后才能参与讨论</span>
+              </div>
+
+              <!-- 活动已结束 -->
+              <div v-else-if="event.status === 'ENDED'" class="comment-hint">
+                <el-icon :size="16"><ChatLineSquare /></el-icon>
+                <span>活动已结束，讨论区已关闭</span>
+              </div>
+
+              <!-- 已报名，可评论 -->
+              <div v-else class="comment-form">
+                <el-input
+                  v-model="commentContent"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="发表你的看法…"
+                  maxlength="500"
+                  show-word-limit
+                />
+                <div class="comment-form-actions">
+                  <button
+                    class="comment-submit"
+                    :disabled="!commentContent.trim() || commentSubmitting"
+                    @click="handleComment"
+                  >
+                    发送评论
+                  </button>
+                </div>
+              </div>
             </div>
 
             <!-- 评论列表 -->
@@ -79,7 +102,7 @@
                     <span class="comment-time">{{ formatDateTime(comment.createdAt) }}</span>
                     <button
                       v-if="userStore.isLoggedIn && (userStore.user?.id === comment.userId || userStore.isAdmin)"
-                      class="comment-delete"
+                      class="comment-delete-btn"
                       @click="handleDeleteComment(comment.id)"
                     >
                       删除
@@ -106,9 +129,9 @@
               </div>
             </div>
 
-            <!-- 空评论 -->
-            <div class="comment-empty" v-else>
-              <p>暂无评论，来说点什么吧</p>
+            <!-- 空评论提示 -->
+            <div class="comment-empty" v-else-if="event.isRegistered || event.status === 'ENDED'">
+              <p>暂无评论</p>
             </div>
 
             <!-- 评论分页 -->
@@ -125,12 +148,12 @@
           </el-card>
         </div>
 
-        <!-- 右栏：信息汇总卡片 -->
+        <!-- 右栏：信息 + 操作面板 -->
         <div class="side-col">
           <el-card class="info-card" shadow="never">
             <!-- 地点 -->
             <div class="info-item">
-              <el-icon :size="18" class="info-icon"><Location /></el-icon>
+              <el-icon :size="16" class="info-icon"><Location /></el-icon>
               <div class="info-body">
                 <span class="info-label">地点</span>
                 <span class="info-value">{{ event.location }}</span>
@@ -141,12 +164,12 @@
 
             <!-- 时间 -->
             <div class="info-item">
-              <el-icon :size="18" class="info-icon"><Clock /></el-icon>
+              <el-icon :size="16" class="info-icon"><Clock /></el-icon>
               <div class="info-body">
-                <span class="info-label">时间</span>
+                <span class="info-label">活动时间</span>
                 <span class="info-value">
                   {{ formatDateTime(event.startTime) }}
-                  <span class="info-value-sep">—</span>
+                  <span class="info-sep">—</span>
                   {{ formatDateTime(event.endTime) }}
                 </span>
               </div>
@@ -154,12 +177,14 @@
 
             <div class="info-divider" />
 
-            <!-- 截止报名 -->
+            <!-- 报名截止 -->
             <div class="info-item">
-              <el-icon :size="18" class="info-icon"><Calendar /></el-icon>
+              <el-icon :size="16" class="info-icon"><Calendar /></el-icon>
               <div class="info-body">
-                <span class="info-label">截止报名</span>
-                <span class="info-value">{{ formatDateTime(event.registrationDeadline) }}</span>
+                <span class="info-label">报名截止</span>
+                <span class="info-value" :class="{ 'deadline-passed': isDeadlinePassed(event) }">
+                  {{ formatDateTime(event.registrationDeadline) }}
+                </span>
               </div>
             </div>
 
@@ -167,92 +192,31 @@
 
             <!-- 参与人数 + 进度条 -->
             <div class="info-item">
-              <el-icon :size="18" class="info-icon"><User /></el-icon>
+              <el-icon :size="16" class="info-icon"><User /></el-icon>
               <div class="info-body">
-                <span class="info-label">参与人数</span>
+                <span class="info-label">名额</span>
                 <span class="info-value number-value">
                   {{ event.currentParticipants }} / {{ event.maxParticipants }}
+                  <span class="remaining-badge" v-if="event.status === 'OPEN'">
+                    余 {{ remainingSlots(event) }}
+                  </span>
                 </span>
                 <div class="info-progress">
                   <div class="progress-track">
                     <div
                       class="progress-fill"
-                      :style="{ width: progressPercent + '%' }"
+                      :style="{ width: progressPercent(event) + '%' }"
                     />
                   </div>
-                  <span class="progress-text">{{ progressPercent }}%</span>
+                  <span class="progress-pct">{{ progressPercent(event) }}%</span>
                 </div>
               </div>
             </div>
 
-            <!-- 操作区 -->
+            <!-- ═══ 操作区 ═══════════════════ -->
             <div class="info-actions">
-              <!-- 已登录 -->
-              <template v-if="userStore.isLoggedIn">
-                <template v-if="event.status === 'OPEN'">
-                  <button
-                    v-if="isRegistered"
-                    class="action-btn action-outline"
-                    @click="handleCancelReg"
-                  >
-                    取消报名
-                  </button>
-                  <button
-                    v-else-if="isDeadlinePassed"
-                    class="action-btn action-disabled"
-                    disabled
-                  >
-                    报名已截止
-                  </button>
-                  <button
-                    v-else-if="event.currentParticipants < event.maxParticipants"
-                    class="action-btn action-primary"
-                    @click="handleRegister"
-                  >
-                    立刻报名参加
-                  </button>
-                  <button
-                    v-else
-                    class="action-btn action-disabled"
-                    disabled
-                  >
-                    名额已满
-                  </button>
-                </template>
-                <template v-else>
-                  <button class="action-btn action-disabled" disabled>
-                    {{ StatusMap[event.status] }}
-                  </button>
-                </template>
-
-                <!-- 收藏 -->
-                <button
-                  class="fav-btn"
-                  :class="{ favorited: isFavorited }"
-                  @click="handleFavoriteToggle"
-                >
-                  <el-icon :size="16"><StarFilled v-if="isFavorited" /><Star v-else /></el-icon>
-                  <span>{{ isFavorited ? '已收藏' : '收藏' }}</span>
-                </button>
-
-                <!-- 管理员操作 -->
-                <template v-if="userStore.isAdmin">
-                  <div class="info-divider" />
-                  <div class="admin-actions">
-                    <button class="admin-btn" @click="$router.push(`/events/${event.id}/edit`)">
-                      <el-icon :size="14"><Edit /></el-icon>
-                      编辑活动
-                    </button>
-                    <button class="admin-btn admin-btn-danger" @click="handleDeleteEvent">
-                      <el-icon :size="14"><Delete /></el-icon>
-                      删除活动
-                    </button>
-                  </div>
-                </template>
-              </template>
-
-              <!-- 未登录 -->
-              <template v-else>
+              <!-- 未登录：引导登录 -->
+              <template v-if="!userStore.isLoggedIn">
                 <button
                   class="action-btn action-primary"
                   @click="$router.push({ path: '/login', query: { redirect: $route.fullPath } })"
@@ -260,32 +224,113 @@
                   登录后即可报名
                 </button>
               </template>
+
+              <!-- 已登录 -->
+              <template v-else>
+                <!-- 报名 / 取消报名 -->
+                <template v-if="canRegister(event)">
+                  <button
+                    v-if="event.isRegistered"
+                    class="action-btn action-outline"
+                    @click="handleCancelReg"
+                  >
+                    取消报名
+                  </button>
+                  <button
+                    v-else
+                    class="action-btn action-primary"
+                    @click="handleRegister"
+                  >
+                    立即报名
+                  </button>
+                </template>
+
+                <!-- 不可报名状态 -->
+                <template v-else>
+                  <button class="action-btn action-disabled" disabled>
+                    <template v-if="event.isRegistered && event.status === 'OPEN'">
+                      已报名（{{ isDeadlinePassed(event) ? '报名已截止' : isFull(event) ? '名额已满' : '' }}）
+                    </template>
+                    <template v-else-if="event.isRegistered && event.status === 'ONGOING'">
+                      已报名 · 进行中
+                    </template>
+                    <template v-else-if="event.isRegistered && event.status === 'ENDED'">
+                      已参加 · 已结束
+                    </template>
+                    <template v-else-if="event.status === 'ENDED'">
+                      活动已结束
+                    </template>
+                    <template v-else-if="event.status === 'ONGOING'">
+                      进行中
+                    </template>
+                    <template v-else-if="isDeadlinePassed(event)">
+                      报名已截止
+                    </template>
+                    <template v-else>
+                      名额已满
+                    </template>
+                  </button>
+                </template>
+
+                <!-- 收藏 -->
+                <button
+                  class="fav-btn"
+                  :class="{ favorited: event.isFavorited }"
+                  @click="handleFavoriteToggle"
+                >
+                  <el-icon :size="15"><StarFilled v-if="event.isFavorited" /><Star v-else /></el-icon>
+                  <span>{{ event.isFavorited ? '已收藏' : '收藏活动' }}</span>
+                </button>
+
+                <!-- 管理员操作 -->
+                <template v-if="isEventAdmin">
+                  <div class="info-divider" />
+                  <div class="admin-actions">
+                    <span class="admin-label">管理</span>
+                    <div class="admin-btn-group">
+                      <button class="admin-btn" @click="$router.push(`/events/${event.id}/edit`)">
+                        <el-icon :size="14"><Edit /></el-icon>
+                        编辑
+                      </button>
+                      <button class="admin-btn admin-btn-danger" @click="handleDeleteEvent">
+                        <el-icon :size="14"><Delete /></el-icon>
+                        删除
+                      </button>
+                      <button class="admin-btn" @click="showParticipants = !showParticipants">
+                        <el-icon :size="14"><User /></el-icon>
+                        参与者
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </template>
             </div>
 
-            <!-- 参与人员 -->
-            <template v-if="participants.length > 0">
+            <!-- 参与者列表（折叠面板） -->
+            <template v-if="showParticipants && participants.length > 0">
               <div class="info-divider" />
               <div class="participants-section">
-                <span class="participants-heading">参与人员 · {{ participants.length }} 人</span>
+                <span class="participants-heading">参与者 · {{ participants.length }} 人</span>
                 <div class="participants-list">
                   <div
                     class="participant-row"
                     v-for="p in participants"
                     :key="p.userId"
                   >
-                    <div class="participant-avatar-sm">
-                      <img
-                        v-if="p.avatar"
-                        :src="p.avatar"
-                        :alt="p.username"
-                      />
+                    <div class="participant-avatar">
+                      <img v-if="p.avatar" :src="p.avatar" :alt="p.username" />
                       <span v-else>{{ p.username.charAt(0).toUpperCase() }}</span>
                     </div>
-                    <span class="participant-name-sm">{{ p.username }}</span>
+                    <span class="participant-name">{{ p.username }}</span>
                   </div>
                 </div>
               </div>
             </template>
+            <div v-else-if="showParticipants && participants.length === 0" class="info-divider">
+              <div class="participants-section">
+                <span class="participants-heading">暂无参与者</span>
+              </div>
+            </div>
           </el-card>
         </div>
       </div>
@@ -305,7 +350,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Star, StarFilled, Location, Clock, Calendar,
-  User, ArrowLeft, Edit, Delete, Warning,
+  User, ArrowLeft, Edit, Delete, Warning, ChatLineSquare,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -317,7 +362,12 @@ import {
 } from '../api/comment'
 import { addFavorite, removeFavorite } from '../api/favorite'
 import { useUserStore } from '../stores/user'
-import { CategoryMap, StatusMap } from '../types'
+import { CategoryLabels } from '../utils/eventUtils'
+import {
+  canRegister, isFull, isDeadlinePassed,
+  remainingSlots, progressPercent, getStatusLabel, getStatusClass,
+  formatDateTime,
+} from '../utils/eventUtils'
 import type { EventItem, Comment, Participant } from '../types'
 
 const route = useRoute()
@@ -333,48 +383,26 @@ const commentPage = ref(1)
 const commentTotal = ref(0)
 const commentSubmitting = ref(false)
 const likeLoading = ref<Record<number, boolean>>({})
-
-const isRegistered = ref(false)
-const isFavorited = ref(false)
 const participants = ref<Participant[]>([])
+const showParticipants = ref(false)
 
-const isDeadlinePassed = computed(() => {
-  if (!event.value?.registrationDeadline) return false
-  return new Date(event.value.registrationDeadline) < new Date()
+const statusLabel = computed(() => event.value ? getStatusLabel(event.value) : '')
+const statusClass = computed(() => event.value ? getStatusClass(event.value) : '')
+
+const isEventAdmin = computed(() => {
+  if (!userStore.isLoggedIn || !event.value) return false
+  return userStore.isAdmin || userStore.user?.id === event.value.creatorId
 })
-
-const progressPercent = computed(() => {
-  if (!event.value) return 0
-  const { currentParticipants, maxParticipants } = event.value
-  if (maxParticipants === 0) return 0
-  return Math.min(100, Math.round((currentParticipants / maxParticipants) * 100))
-})
-
-const bannerStyle = computed(() => {
-  if (event.value?.coverImage) {
-    return { backgroundImage: `url(${event.value.coverImage})` }
-  }
-  return {}
-})
-
-function formatDateTime(dateStr: string) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const h = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  return `${y}-${m}-${day} ${h}:${min}`
-}
 
 async function loadEvent() {
   loading.value = true
   try {
     const res = await getEvent(eventId)
     event.value = res.data
-    isRegistered.value = res.data.isRegistered ?? false
-    isFavorited.value = res.data.isFavorited ?? false
+    // 管理员/创建者可查看参与者
+    if (isEventAdmin.value) {
+      loadParticipants()
+    }
   } finally {
     loading.value = false
   }
@@ -387,8 +415,12 @@ async function loadComments() {
 }
 
 async function loadParticipants() {
-  const res = await getEventParticipants(eventId)
-  participants.value = res.data
+  try {
+    const res = await getEventParticipants(eventId)
+    participants.value = res.data
+  } catch {
+    participants.value = []
+  }
 }
 
 async function handleRegister() {
@@ -396,47 +428,45 @@ async function handleRegister() {
     await registerEvent(eventId)
     ElMessage.success('报名成功')
     await loadEvent()
-    await loadParticipants()
   } catch { /* interceptor handles */ }
 }
 
 async function handleCancelReg() {
   await ElMessageBox.confirm(
-    '确定取消报名吗？取消后名额可能被其他人抢占。',
+    '确定取消报名吗？',
     '确认取消',
-    { type: 'warning', confirmButtonText: '确定取消', cancelButtonText: '再想想' },
+    { type: 'warning', confirmButtonText: '确定', cancelButtonText: '再想想' },
   )
   try {
     await cancelRegistration(eventId)
     ElMessage.success('已取消报名')
     await loadEvent()
-    await loadParticipants()
   } catch { /* interceptor handles */ }
 }
 
 async function handleFavoriteToggle() {
   try {
-    if (isFavorited.value) {
+    if (event.value?.isFavorited) {
       await removeFavorite(eventId)
       ElMessage.success('已取消收藏')
-      isFavorited.value = false
+      if (event.value) event.value.isFavorited = false
     } else {
       await addFavorite(eventId)
       ElMessage.success('收藏成功')
-      isFavorited.value = true
+      if (event.value) event.value.isFavorited = true
     }
   } catch { /* interceptor handles */ }
 }
 
 async function handleDeleteEvent() {
   await ElMessageBox.confirm(
-    '确定永久删除该活动吗？',
+    '确定永久删除该活动吗？此操作不可撤销。',
     '系统警告',
     { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
   )
   try {
     await deleteEvent(eventId)
-    ElMessage.success('活动删除成功')
+    ElMessage.success('活动已删除')
     router.replace('/')
   } catch { /* interceptor handles */ }
 }
@@ -448,7 +478,7 @@ async function handleComment() {
     await createComment(eventId, { content: commentContent.value })
     commentContent.value = ''
     ElMessage.success('评论成功')
-    loadComments()
+    await loadComments()
   } catch { /* interceptor handles */ }
   commentSubmitting.value = false
 }
@@ -477,40 +507,23 @@ async function handleToggleLike(comment: Comment) {
 onMounted(() => {
   loadEvent()
   loadComments()
-  if (userStore.isLoggedIn) {
-    loadParticipants()
-  }
 })
 </script>
 
 <style scoped>
-/* ================================================
-   Hero
-   ================================================ */
-.hero-banner {
+/* ════════════════════════════════════════
+   Hero — 干净深色标题区
+   ════════════════════════════════════════ */
+.detail-hero {
   margin: -80px -20px 0;
   padding-top: 80px;
-  height: 320px;
-  background-color: #18181B;
-  background-size: cover;
-  background-position: center;
-  position: relative;
+  background: #18181B;
 }
 
-.hero-overlay {
-  position: absolute;
-  inset: 0;
-  /* 有图片时加深蒙层，纯色背景时不额外叠加 */
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: flex-end;
-}
-
-.hero-content {
+.hero-body {
   max-width: 960px;
-  width: 100%;
   margin: 0 auto;
-  padding: 0 20px 36px;
+  padding: 28px 20px 32px;
 }
 
 .back-link {
@@ -519,7 +532,7 @@ onMounted(() => {
   gap: 4px;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.55);
   font-size: 13px;
   font-family: var(--font-base);
   cursor: pointer;
@@ -533,42 +546,64 @@ onMounted(() => {
 }
 
 .hero-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: #FFFFFF;
-  line-height: 1.3;
-  margin-bottom: 16px;
+  line-height: 1.35;
+  margin-bottom: 14px;
   letter-spacing: -0.2px;
 }
 
-/* 统一药丸标签 */
-.hero-pills {
+.hero-meta {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.hero-pill {
+.hero-tag {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.12);
-  line-height: 1.5;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  line-height: 1.6;
 }
 
-/* ================================================
+.hero-tag-status.status-open {
+  background: rgba(180, 83, 9, 0.3);
+  color: #FBBF24;
+}
+
+.hero-tag-status.status-ongoing {
+  background: rgba(5, 150, 105, 0.25);
+  color: #6EE7B7;
+}
+
+.hero-tag-status.status-ended {
+  background: rgba(255, 255, 255, 0.06);
+  color: #A1A1AA;
+}
+
+.hero-tag-status.status-closed {
+  background: rgba(255, 255, 255, 0.06);
+  color: #A1A1AA;
+}
+
+.hero-creator {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ════════════════════════════════════════
    双栏主体
-   ================================================ */
+   ════════════════════════════════════════ */
 .detail-body {
   max-width: 960px;
-  margin: -24px auto 40px;
+  margin: 24px auto 40px;
   padding: 0 20px;
-  position: relative;
-  z-index: 10;
   display: flex;
   gap: 24px;
   align-items: flex-start;
@@ -579,7 +614,7 @@ onMounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .side-col {
@@ -589,9 +624,23 @@ onMounted(() => {
   top: 80px;
 }
 
-/* ================================================
-   通用卡片
-   ================================================ */
+/* ── 封面图 ──────────────────────────── */
+.cover-section {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+}
+
+.cover-image {
+  width: 100%;
+  display: block;
+  max-height: 400px;
+  object-fit: cover;
+}
+
+/* ════════════════════════════════════════
+   内容卡片
+   ════════════════════════════════════════ */
 .content-card,
 .info-card {
   border-radius: var(--radius-md) !important;
@@ -600,45 +649,62 @@ onMounted(() => {
 }
 
 .content-card :deep(.el-card__body) {
-  padding: 24px;
+  padding: 22px 24px;
 }
 
 .info-card :deep(.el-card__body) {
-  padding: 20px 22px 22px;
+  padding: 18px 20px 20px;
 }
 
 .card-heading {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--c-text);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
-/* ── 活动详情 ────────────────────────── */
+/* ── 活动详情正文 ────────────────────── */
 .detail-text {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--c-text-light);
   line-height: 1.85;
   white-space: pre-wrap;
 }
 
-/* ================================================
+/* ════════════════════════════════════════
    讨论区
-   ================================================ */
-.comment-form {
-  margin-bottom: 24px;
+   ════════════════════════════════════════ */
+.comment-input-area {
+  margin-bottom: 20px;
 }
 
-:deep(.comment-textarea .el-textarea__inner) {
+.comment-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background: #FAFAFA;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--c-text-muted);
+}
+
+.comment-hint a {
+  color: var(--c-primary);
+  font-weight: 500;
+}
+
+.comment-form :deep(.el-textarea__inner) {
   border-radius: var(--radius-sm) !important;
   border: 1px solid var(--c-border) !important;
   box-shadow: none !important;
   background: #FAFAFA;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--c-text);
+  resize: none;
 }
 
-:deep(.comment-textarea .el-textarea__inner:focus) {
+.comment-form :deep(.el-textarea__inner:focus) {
   border-color: var(--c-primary) !important;
   box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.1) !important;
 }
@@ -646,7 +712,7 @@ onMounted(() => {
 .comment-form-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .comment-submit {
@@ -675,24 +741,11 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-.comment-login-hint {
-  text-align: center;
-  padding: 20px;
-  color: var(--c-text-muted);
-  font-size: 14px;
-  margin-bottom: 24px;
-}
-
-.comment-login-hint a {
-  color: var(--c-primary);
-  font-weight: 500;
-}
-
 /* ── 评论列表 ────────────────────────── */
 .comment-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .comment-item {
@@ -704,9 +757,9 @@ onMounted(() => {
 }
 
 .comment-avatar {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
   border-radius: 50%;
   background: #B45309;
   color: #FFFFFF;
@@ -714,7 +767,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   overflow: hidden;
 }
 
@@ -733,7 +786,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .comment-user {
@@ -747,7 +800,7 @@ onMounted(() => {
   color: var(--c-text-muted);
 }
 
-.comment-delete {
+.comment-delete-btn {
   margin-left: auto;
   background: none;
   border: none;
@@ -759,18 +812,18 @@ onMounted(() => {
   transition: color 0.2s ease;
 }
 
-.comment-delete:hover {
+.comment-delete-btn:hover {
   color: #EF4444;
 }
 
 .comment-text {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--c-text);
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 .comment-actions {
-  margin-top: 8px;
+  margin-top: 6px;
   display: flex;
   align-items: center;
 }
@@ -808,24 +861,24 @@ onMounted(() => {
 
 .comment-empty {
   text-align: center;
-  padding: 32px 0;
+  padding: 28px 0;
   color: var(--c-text-muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .comment-pagination {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: 18px;
 }
 
-/* ================================================
+/* ════════════════════════════════════════
    右栏信息卡片
-   ================================================ */
+   ════════════════════════════════════════ */
 .info-item {
   display: flex;
-  gap: 12px;
-  padding: 12px 0;
+  gap: 10px;
+  padding: 10px 0;
 }
 
 .info-item:first-child {
@@ -845,49 +898,58 @@ onMounted(() => {
 
 .info-label {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--c-text-muted);
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .info-value {
   display: block;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--c-text);
   line-height: 1.5;
 }
 
-.number-value {
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--c-text);
+.info-value.deadline-passed {
+  color: #DC2626;
 }
 
-.info-value-sep {
+.number-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.remaining-badge {
+  font-size: 12px;
+  font-weight: 500;
+  color: #059669;
+  margin-left: 4px;
+}
+
+.info-sep {
   color: var(--c-text-muted);
-  margin: 0 4px;
+  margin: 0 3px;
   font-weight: 400;
 }
 
-/* 分隔线 */
 .info-divider {
   height: 1px;
   background: #F4F4F5;
   margin: 0;
 }
 
-/* 进度条 */
+/* ── 进度条 ──────────────────────────── */
 .info-progress {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .progress-track {
   flex: 1;
-  height: 6px;
+  height: 5px;
   background: #F4F4F5;
   border-radius: 3px;
   overflow: hidden;
@@ -900,35 +962,36 @@ onMounted(() => {
   transition: width 0.4s ease;
 }
 
-.progress-text {
-  font-size: 12px;
+.progress-pct {
+  font-size: 11px;
   font-weight: 500;
   color: var(--c-text-muted);
   min-width: 32px;
   text-align: right;
 }
 
-/* ── 操作按钮区 ──────────────────────── */
+/* ════════════════════════════════════════
+   操作按钮
+   ════════════════════════════════════════ */
 .info-actions {
-  padding-top: 18px;
+  padding-top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .action-btn {
   width: 100%;
-  height: 44px;
+  height: 42px;
   border: none;
   border-radius: var(--radius-sm);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: var(--font-base);
   transition: all 0.2s ease;
 }
 
-/* 主操作 —— 唯一的强视觉焦点 */
 .action-primary {
   background: #B45309;
   color: #FFFFFF;
@@ -938,7 +1001,6 @@ onMounted(() => {
   background: #D97742;
 }
 
-/* 次要操作 */
 .action-outline {
   background: transparent;
   color: var(--c-text);
@@ -949,11 +1011,11 @@ onMounted(() => {
   border-color: var(--c-text-muted);
 }
 
-/* 禁用态 */
 .action-disabled {
   background: #F4F4F5;
   color: #A1A1AA;
   cursor: not-allowed;
+  font-size: 13px;
 }
 
 /* 收藏按钮 */
@@ -961,8 +1023,8 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  height: 34px;
+  gap: 6px;
+  height: 36px;
   padding: 0 14px;
   background: transparent;
   border: 1px solid var(--c-border);
@@ -984,17 +1046,29 @@ onMounted(() => {
   color: #B45309;
 }
 
-/* 管理员操作 */
+/* ── 管理员操作 ──────────────────────── */
 .admin-actions {
+  padding-top: 4px;
+}
+
+.admin-label {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.admin-btn-group {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .admin-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
+  padding: 5px 10px;
   background: transparent;
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
@@ -1014,24 +1088,24 @@ onMounted(() => {
   color: #EF4444;
 }
 
-/* ── 参与人员 ────────────────────────── */
+/* ── 参与者 ──────────────────────────── */
 .participants-section {
-  padding-top: 14px;
+  padding-top: 12px;
 }
 
 .participants-heading {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--c-text-light);
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .participants-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 240px;
+  gap: 4px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
@@ -1039,19 +1113,18 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 8px;
+  padding: 4px 6px;
   border-radius: 6px;
-  transition: background 0.15s ease;
 }
 
 .participant-row:hover {
   background: #FAFAFA;
 }
 
-.participant-avatar-sm {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
+.participant-avatar {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
   border-radius: 50%;
   background: #D4D4D8;
   color: #FFFFFF;
@@ -1059,25 +1132,24 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 10px;
   overflow: hidden;
 }
 
-.participant-avatar-sm img {
+.participant-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.participant-name-sm {
+.participant-name {
   font-size: 13px;
   color: var(--c-text);
-  font-weight: 400;
 }
 
-/* ================================================
+/* ════════════════════════════════════════
    不存在
-   ================================================ */
+   ════════════════════════════════════════ */
 .not-found {
   display: flex;
   flex-direction: column;
@@ -1120,9 +1192,9 @@ onMounted(() => {
   background: #D97742;
 }
 
-/* ================================================
+/* ════════════════════════════════════════
    响应式
-   ================================================ */
+   ════════════════════════════════════════ */
 @media (max-width: 900px) {
   .detail-body {
     flex-direction: column;
@@ -1133,12 +1205,8 @@ onMounted(() => {
     position: static;
   }
 
-  .hero-banner {
-    height: 240px;
-  }
-
   .hero-title {
-    font-size: 24px;
+    font-size: 22px;
   }
 }
 </style>

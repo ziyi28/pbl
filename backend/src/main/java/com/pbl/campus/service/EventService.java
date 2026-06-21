@@ -66,22 +66,14 @@ public class EventService {
         if (event == null || event.getIsDeleted()) {
             return Result.error(404, "活动不存在");
         }
-        EventResponse response = toResponse(event);
-        if (userId != null) {
-            response.setIsRegistered(registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
-                    .eq(Registration::getUserId, userId)
-                    .eq(Registration::getEventId, id)) > 0);
-            response.setIsFavorited(favoriteMapper.selectCount(new LambdaQueryWrapper<Favorite>()
-                    .eq(Favorite::getUserId, userId)
-                    .eq(Favorite::getEventId, id)) > 0);
-        }
-        return Result.success(response);
+        return Result.success(toResponse(event, userId));
     }
 
     public Result<PageResult<EventResponse>> listEvents(int page, int size,
                                                          EventCategory category,
                                                          EventStatus status,
-                                                         String keyword) {
+                                                         String keyword,
+                                                         Long userId) {
         LambdaQueryWrapper<Event> wrapper = new LambdaQueryWrapper<Event>()
                 .eq(Event::getIsDeleted, false)
                 .eq(category != null, Event::getCategory, category)
@@ -92,7 +84,7 @@ public class EventService {
         Page<Event> pageResult = eventMapper.selectPage(new Page<>(page, size), wrapper);
 
         List<EventResponse> records = pageResult.getRecords().stream()
-                .map(this::toResponse)
+                .map(event -> toResponse(event, userId))
                 .toList();
 
         PageResult<EventResponse> result = new PageResult<>(
@@ -184,11 +176,23 @@ public class EventService {
     }
 
     private EventResponse toResponse(Event event) {
+        return toResponse(event, null);
+    }
+
+    private EventResponse toResponse(Event event, Long userId) {
         EventResponse response = new EventResponse();
         BeanUtils.copyProperties(event, response);
         User creator = userMapper.selectById(event.getCreatorId());
         if (creator != null) {
             response.setCreatorName(creator.getUsername());
+        }
+        if (userId != null) {
+            response.setIsRegistered(registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
+                    .eq(Registration::getUserId, userId)
+                    .eq(Registration::getEventId, event.getId())) > 0);
+            response.setIsFavorited(favoriteMapper.selectCount(new LambdaQueryWrapper<Favorite>()
+                    .eq(Favorite::getUserId, userId)
+                    .eq(Favorite::getEventId, event.getId())) > 0);
         }
         return response;
     }

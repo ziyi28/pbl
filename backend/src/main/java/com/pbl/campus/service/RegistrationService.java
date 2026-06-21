@@ -108,6 +108,10 @@ public class RegistrationService {
                     if (event == null) return null;
                     EventResponse response = new EventResponse();
                     BeanUtils.copyProperties(event, response);
+                    User creator = userMapper.selectById(event.getCreatorId());
+                    if (creator != null) {
+                        response.setCreatorName(creator.getUsername());
+                    }
                     return response;
                 })
                 .filter(e -> e != null)
