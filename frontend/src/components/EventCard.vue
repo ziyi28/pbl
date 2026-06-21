@@ -245,6 +245,11 @@ const capacityLevel = computed(() => {
   color: #A1A1AA;
 }
 
+.status-cancelled {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
 /* 已报名标记 */
 .reg-badge {
   position: absolute;

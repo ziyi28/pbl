@@ -32,6 +32,9 @@ public class CommentService {
         if (event.getStatus() == EventStatus.ENDED) {
             return Result.error("活动已结束，不可评论");
         }
+        if (event.getStatus() == EventStatus.CANCELLED) {
+            return Result.error("活动已取消，不可评论");
+        }
         Long registeredCount = registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
                 .eq(Registration::getUserId, userId)
                 .eq(Registration::getEventId, eventId));

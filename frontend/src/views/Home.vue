@@ -42,6 +42,7 @@
           <el-option label="报名中" value="OPEN" />
           <el-option label="进行中" value="ONGOING" />
           <el-option label="已结束" value="ENDED" />
+          <el-option label="已取消" value="CANCELLED" />
         </el-select>
         <el-checkbox
           v-model="openOnly"

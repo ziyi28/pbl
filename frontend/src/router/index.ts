@@ -46,6 +46,18 @@ const router = createRouter({
       component: () => import('../views/Profile.vue'),
       meta: { title: '个人中心', requiresAuth: true },
     },
+    {
+      path: '/admin/events',
+      name: 'AdminEvents',
+      component: () => import('../views/AdminEvents.vue'),
+      meta: { title: '活动管理台', requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/notifications',
+      name: 'Notifications',
+      component: () => import('../views/Notifications.vue'),
+      meta: { title: '消息通知', requiresAuth: true },
+    },
   ],
 })
 

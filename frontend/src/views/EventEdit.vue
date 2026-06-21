@@ -373,6 +373,7 @@ onMounted(() => loadEvent())
 .status-value.status-ongoing { color: #059669; }
 .status-value.status-ended { color: #A1A1AA; }
 .status-value.status-closed { color: #71717A; }
+.status-value.status-cancelled { color: #DC2626; }
 
 .status-divider {
   width: 1px;

@@ -19,6 +19,10 @@ request.interceptors.request.use((config) => {
 // 响应拦截器：统一处理错误
 request.interceptors.response.use(
   (response) => {
+    // blob 响应（文件下载等）直接返回 data
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
     const res = response.data
     if (res.code !== 200) {
       ElMessage.error(res.message || '请求失败')
@@ -27,6 +31,18 @@ request.interceptors.response.use(
     return res
   },
   (error) => {
+    // blob 错误响应：尝试从 blob 中解析错误消息
+    if (error.config?.responseType === 'blob' && error.response?.data instanceof Blob) {
+      error.response.data.text().then((text: string) => {
+        try {
+          const err = JSON.parse(text)
+          ElMessage.error(err.message || '下载失败')
+        } catch {
+          ElMessage.error('下载失败')
+        }
+      })
+      return Promise.reject(error)
+    }
     if (error.response?.status === 401) {
       clearAuth()
       window.location.href = '/login'

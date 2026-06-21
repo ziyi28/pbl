@@ -2,22 +2,23 @@ import type { EventItem } from '../types'
 
 /**
  * 活动是否可报名
- * 条件：状态为 OPEN、未过报名截止时间、名额未满、且用户未报名
+ * 条件：状态为 OPEN、未过报名截止时间、名额未满、且用户未报名、未取消
  */
 export function canRegister(event: EventItem): boolean {
   if (event.isRegistered) return false
   if (event.status !== 'OPEN') return false
-  if (new Date(event.registrationDeadline) < new Date()) return false
-  if (event.currentParticipants >= event.maxParticipants) return false
+  if (isDeadlinePassed(event)) return false
+  if (isFull(event)) return false
   return true
 }
 
 /**
  * 活动是否可取消报名
- * 条件：用户已报名、活动状态为 OPEN、活动未开始
+ * 条件：用户已报名、活动状态为 OPEN、活动未开始、未取消
  */
 export function canCancelRegistration(event: EventItem): boolean {
   if (!event.isRegistered) return false
+  if (event.status === 'CANCELLED') return false
   if (event.status !== 'OPEN') return false
   // 活动尚未开始
   if (new Date(event.startTime) <= new Date()) return false
@@ -63,6 +64,7 @@ export function progressPercent(event: EventItem): number {
  *   已结束 → 已结束
  */
 export function getStatusLabel(event: EventItem): string {
+  if (event.status === 'CANCELLED') return '已取消'
   if (event.status === 'ENDED') return '已结束'
   if (event.status === 'ONGOING') return '进行中'
   // status === OPEN
@@ -89,6 +91,7 @@ export function getSubStatusLabel(event: EventItem): string {
  * 活动状态对应的颜色类名
  */
 export function getStatusClass(event: EventItem): string {
+  if (event.status === 'CANCELLED') return 'status-cancelled'
   if (event.status === 'ENDED') return 'status-ended'
   if (event.status === 'ONGOING') return 'status-ongoing'
   if (isDeadlinePassed(event) || isFull(event)) return 'status-closed'
@@ -163,6 +166,7 @@ export const StatusLabels: Record<string, string> = {
   OPEN: '报名中',
   ONGOING: '进行中',
   ENDED: '已结束',
+  CANCELLED: '已取消',
 }
 
 export const CategoryLabels: Record<string, string> = {

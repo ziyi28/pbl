@@ -9,8 +9,15 @@
 
     <nav class="nav-links">
       <template v-if="userStore.isLoggedIn">
+        <router-link v-if="userStore.isAdmin" to="/admin/events" class="nav-item">
+          <el-icon><Setting /></el-icon> 管理
+        </router-link>
         <router-link v-if="userStore.isAdmin" to="/events/create" class="nav-item">
           <el-icon><Plus /></el-icon> 发布活动
+        </router-link>
+        <router-link to="/notifications" class="nav-item notify-item">
+          <el-icon><Bell /></el-icon>
+          <span v-if="unreadCount > 0" class="unread-count">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
         </router-link>
         <router-link to="/profile" class="nav-item">
           <el-icon><User /></el-icon> {{ userStore.username }}
@@ -28,18 +35,42 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { ElMessage } from 'element-plus'
+import { getUnreadCount } from '../api/notification'
 
 const router = useRouter()
 const userStore = useUserStore()
+const unreadCount = ref(0)
+
+async function fetchUnreadCount() {
+  if (!userStore.isLoggedIn) return
+  try {
+    const res = await getUnreadCount()
+    unreadCount.value = res.data
+  } catch {
+    // ignore
+  }
+}
 
 function handleLogout() {
   userStore.logout()
   ElMessage.success('已退出登录')
   router.push('/')
 }
+
+onMounted(() => {
+  fetchUnreadCount()
+  // 每30秒刷新一次未读数
+  setInterval(fetchUnreadCount, 30000)
+})
+
+watch(() => userStore.isLoggedIn, (loggedIn) => {
+  if (loggedIn) fetchUnreadCount()
+  else unreadCount.value = 0
+})
 </script>
 
 <style scoped>
@@ -160,5 +191,25 @@ function handleLogout() {
 .register-btn:hover {
   background: var(--c-primary-light);
   color: #FFFFFF;
+}
+
+.notify-item {
+  position: relative;
+}
+
+.unread-count {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  color: #FFFFFF;
+  background: #DC2626;
+  border-radius: 8px;
 }
 </style>

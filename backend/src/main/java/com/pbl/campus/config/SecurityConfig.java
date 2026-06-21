@@ -37,7 +37,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/doc.html",
-                                "/swagger-resources/**"
+                                "/swagger-resources/**",
+                                "/webjars/**",
+                                "/favicon.ico"
                         ).permitAll()
                         // 公开接口
                         .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
@@ -48,6 +50,7 @@ public class SecurityConfig {
                                 "/api/events/*/comments"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/events/*/participants").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/events/*/participants/export").authenticated()
                         // 上传文件的静态资源公开访问
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                         // 管理员接口

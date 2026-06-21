@@ -47,7 +47,7 @@
               </div>
 
               <!-- 已登录但未报名 -->
-              <div v-else-if="!event.isRegistered && event.status !== 'ENDED'" class="comment-hint">
+              <div v-else-if="!event.isRegistered && event.status !== 'ENDED' && event.status !== 'CANCELLED'" class="comment-hint">
                 <el-icon :size="16"><ChatLineSquare /></el-icon>
                 <span>报名活动后才能参与讨论</span>
               </div>
@@ -56,6 +56,12 @@
               <div v-else-if="event.status === 'ENDED'" class="comment-hint">
                 <el-icon :size="16"><ChatLineSquare /></el-icon>
                 <span>活动已结束，讨论区已关闭</span>
+              </div>
+
+              <!-- 活动已取消 -->
+              <div v-else-if="event.status === 'CANCELLED'" class="comment-hint">
+                <el-icon :size="16"><ChatLineSquare /></el-icon>
+                <span>活动已取消，讨论区已关闭</span>
               </div>
 
               <!-- 已报名，可评论 -->
@@ -130,7 +136,7 @@
             </div>
 
             <!-- 空评论提示 -->
-            <div class="comment-empty" v-else-if="event.isRegistered || event.status === 'ENDED'">
+            <div class="comment-empty" v-else-if="event.isRegistered || event.status === 'ENDED' || event.status === 'CANCELLED'">
               <p>暂无评论</p>
             </div>
 
@@ -247,7 +253,13 @@
 
                 <!-- 其他状态：禁用态描述 -->
                 <button v-else class="action-btn action-disabled" disabled>
-                  <template v-if="event.isRegistered && event.status === 'OPEN'">
+                  <template v-if="event.status === 'CANCELLED' && event.isRegistered">
+                    活动已取消，报名记录已保留
+                  </template>
+                  <template v-else-if="event.status === 'CANCELLED'">
+                    活动已取消
+                  </template>
+                  <template v-else-if="event.isRegistered && event.status === 'OPEN'">
                     已报名 · {{ isDeadlinePassed(event) ? '报名已截止' : '名额已满' }}
                   </template>
                   <template v-else-if="event.isRegistered && event.status === 'ONGOING'">
@@ -290,6 +302,14 @@
                         <el-icon :size="14"><Edit /></el-icon>
                         编辑
                       </button>
+                      <button
+                        v-if="event.status !== 'CANCELLED' && event.status !== 'ENDED'"
+                        class="admin-btn admin-btn-warning"
+                        @click="handleCancelEvent"
+                      >
+                        <el-icon :size="14"><CircleClose /></el-icon>
+                        取消
+                      </button>
                       <button class="admin-btn admin-btn-danger" @click="handleDeleteEvent">
                         <el-icon :size="14"><Delete /></el-icon>
                         删除
@@ -297,6 +317,10 @@
                       <button class="admin-btn" @click="showParticipants = !showParticipants">
                         <el-icon :size="14"><User /></el-icon>
                         参与者
+                      </button>
+                      <button class="admin-btn" @click="handleExportParticipants">
+                        <el-icon :size="14"><Download /></el-icon>
+                        导出
                       </button>
                     </div>
                   </div>
@@ -349,11 +373,12 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   Star, StarFilled, Location, Clock, Calendar,
   User, ArrowLeft, Edit, Delete, Warning, ChatLineSquare,
+  CircleClose, Download,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getEvent, registerEvent, cancelRegistration,
-  deleteEvent, getEventParticipants,
+  deleteEvent, getEventParticipants, cancelEvent, exportParticipants as exportParticipantsApi,
 } from '../api/event'
 import {
   getComments, createComment, deleteComment, toggleCommentLike,
@@ -467,6 +492,35 @@ async function handleDeleteEvent() {
     ElMessage.success('活动已删除')
     router.replace('/')
   } catch { /* interceptor handles */ }
+}
+
+async function handleCancelEvent() {
+  await ElMessageBox.confirm(
+    '确定要取消该活动吗？取消后所有已报名用户将收到通知，报名记录保留。',
+    '确认取消',
+    { type: 'warning', confirmButtonText: '确定取消', cancelButtonText: '再想想' },
+  )
+  try {
+    await cancelEvent(eventId)
+    ElMessage.success('活动已取消')
+    await loadEvent()
+  } catch { /* interceptor handles */ }
+}
+
+async function handleExportParticipants() {
+  try {
+    const res = await exportParticipantsApi(eventId)
+    const blob = new Blob([res as any], { type: 'text/csv;charset=UTF-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `participants-${eventId}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败')
+  }
 }
 
 async function handleComment() {
@@ -588,6 +642,11 @@ onMounted(() => {
 .hero-tag-status.status-closed {
   background: rgba(255, 255, 255, 0.06);
   color: #A1A1AA;
+}
+
+.hero-tag-status.status-cancelled {
+  background: rgba(220, 38, 38, 0.25);
+  color: #FCA5A5;
 }
 
 .hero-creator {
@@ -1084,6 +1143,11 @@ onMounted(() => {
 .admin-btn-danger:hover {
   border-color: #FCA5A5;
   color: #EF4444;
+}
+
+.admin-btn-warning:hover {
+  border-color: #FCD34D;
+  color: #D97742;
 }
 
 /* ── 参与者 ──────────────────────────── */

@@ -823,6 +823,11 @@ onMounted(async () => {
   color: #71717A;
 }
 
+.item-status.status-cancelled {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
 .item-category {
   font-size: 11px;
   color: var(--c-text-muted);
