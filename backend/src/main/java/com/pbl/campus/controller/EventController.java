@@ -43,9 +43,10 @@ public class EventController {
             @Parameter(description = "活动分类") @RequestParam(required = false) EventCategory category,
             @Parameter(description = "活动状态") @RequestParam(required = false) EventStatus status,
             @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword,
+            @Parameter(description = "仅显示可报名的活动") @RequestParam(defaultValue = "false") boolean availableOnly,
             Authentication authentication) {
         Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
-        return eventService.listEvents(page, size, category, status, keyword, userId);
+        return eventService.listEvents(page, size, category, status, keyword, availableOnly, userId);
     }
 
     @GetMapping("/{id}")

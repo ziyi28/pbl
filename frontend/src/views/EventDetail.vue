@@ -215,7 +215,7 @@
 
             <!-- ═══ 操作区 ═══════════════════ -->
             <div class="info-actions">
-              <!-- 未登录：引导登录 -->
+              <!-- 未登录 -->
               <template v-if="!userStore.isLoggedIn">
                 <button
                   class="action-btn action-primary"
@@ -227,50 +227,48 @@
 
               <!-- 已登录 -->
               <template v-else>
-                <!-- 报名 / 取消报名 -->
-                <template v-if="canRegister(event)">
-                  <button
-                    v-if="event.isRegistered"
-                    class="action-btn action-outline"
-                    @click="handleCancelReg"
-                  >
-                    取消报名
-                  </button>
-                  <button
-                    v-else
-                    class="action-btn action-primary"
-                    @click="handleRegister"
-                  >
-                    立即报名
-                  </button>
-                </template>
+                <!-- 可取消报名（已报名 + OPEN + 未开始） -->
+                <button
+                  v-if="canCancelRegistration(event)"
+                  class="action-btn action-outline"
+                  @click="handleCancelReg"
+                >
+                  取消报名
+                </button>
 
-                <!-- 不可报名状态 -->
-                <template v-else>
-                  <button class="action-btn action-disabled" disabled>
-                    <template v-if="event.isRegistered && event.status === 'OPEN'">
-                      已报名（{{ isDeadlinePassed(event) ? '报名已截止' : isFull(event) ? '名额已满' : '' }}）
-                    </template>
-                    <template v-else-if="event.isRegistered && event.status === 'ONGOING'">
-                      已报名 · 进行中
-                    </template>
-                    <template v-else-if="event.isRegistered && event.status === 'ENDED'">
-                      已参加 · 已结束
-                    </template>
-                    <template v-else-if="event.status === 'ENDED'">
-                      活动已结束
-                    </template>
-                    <template v-else-if="event.status === 'ONGOING'">
-                      进行中
-                    </template>
-                    <template v-else-if="isDeadlinePassed(event)">
-                      报名已截止
-                    </template>
-                    <template v-else>
-                      名额已满
-                    </template>
-                  </button>
-                </template>
+                <!-- 可报名（未报名 + OPEN + 未截止 + 未满） -->
+                <button
+                  v-else-if="canRegister(event)"
+                  class="action-btn action-primary"
+                  @click="handleRegister"
+                >
+                  立即报名
+                </button>
+
+                <!-- 其他状态：禁用态描述 -->
+                <button v-else class="action-btn action-disabled" disabled>
+                  <template v-if="event.isRegistered && event.status === 'OPEN'">
+                    已报名 · {{ isDeadlinePassed(event) ? '报名已截止' : '名额已满' }}
+                  </template>
+                  <template v-else-if="event.isRegistered && event.status === 'ONGOING'">
+                    已报名 · 进行中
+                  </template>
+                  <template v-else-if="event.isRegistered && event.status === 'ENDED'">
+                    已参加 · 已结束
+                  </template>
+                  <template v-else-if="event.status === 'ENDED'">
+                    活动已结束
+                  </template>
+                  <template v-else-if="event.status === 'ONGOING'">
+                    进行中
+                  </template>
+                  <template v-else-if="isDeadlinePassed(event)">
+                    报名已截止
+                  </template>
+                  <template v-else>
+                    名额已满
+                  </template>
+                </button>
 
                 <!-- 收藏 -->
                 <button
@@ -364,7 +362,7 @@ import { addFavorite, removeFavorite } from '../api/favorite'
 import { useUserStore } from '../stores/user'
 import { CategoryLabels } from '../utils/eventUtils'
 import {
-  canRegister, isFull, isDeadlinePassed,
+  canRegister, canCancelRegistration, isDeadlinePassed,
   remainingSlots, progressPercent, getStatusLabel, getStatusClass,
   formatDateTime,
 } from '../utils/eventUtils'
@@ -1200,7 +1198,13 @@ onMounted(() => {
     flex-direction: column;
   }
 
+  /* 移动端：操作面板置顶，在正文之前 */
+  .main-col {
+    order: 2;
+  }
+
   .side-col {
+    order: 1;
     width: 100%;
     position: static;
   }

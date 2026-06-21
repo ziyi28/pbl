@@ -87,21 +87,22 @@
         </el-card>
 
         <!-- 管理员入口 -->
-        <el-card v-if="userStore.isAdmin" class="side-card" shadow="never">
+        <el-card v-if="userStore.isAdmin" class="side-card admin-panel" shadow="never">
           <template #header>
             <div class="card-header-row">
               <el-icon :size="15"><Setting /></el-icon>
-              <span>管理</span>
+              <span>管理控制台</span>
             </div>
           </template>
+          <p class="admin-desc">你拥有管理员权限，可以创建和管理所有活动。</p>
           <div class="admin-links">
-            <button class="admin-link-btn" @click="$router.push('/events/create')">
+            <button class="admin-link-btn admin-link-primary" @click="$router.push('/events/create')">
               <el-icon :size="14"><Plus /></el-icon>
-              创建活动
+              发布新活动
             </button>
             <button class="admin-link-btn" @click="$router.push('/')">
               <el-icon :size="14"><List /></el-icon>
-              活动大厅
+              管理活动大厅
             </button>
           </div>
         </el-card>
@@ -648,6 +649,26 @@ onMounted(async () => {
   color: var(--c-primary);
 }
 
+.admin-link-primary {
+  background: #B45309;
+  color: #FFFFFF;
+  border-color: #B45309;
+}
+
+.admin-link-primary:hover {
+  background: #D97742;
+  border-color: #D97742;
+  color: #FFFFFF;
+}
+
+.admin-desc {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  line-height: 1.6;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
 /* ════════════════════════════════════════
    选项卡卡片
    ════════════════════════════════════════ */
@@ -950,8 +971,27 @@ onMounted(async () => {
     width: 100%;
   }
 
+  /* 移动端列表项改为纵向布局，操作按钮放到底部 */
+  .list-item {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 10px;
+  }
+
+  .item-body {
+    flex-basis: calc(100% - 76px);
+  }
+
   .item-actions {
-    display: none;
+    flex-basis: 100%;
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 4px;
+  }
+
+  .item-action-btn {
+    font-size: 11px;
+    padding: 4px 10px;
   }
 }
 </style>

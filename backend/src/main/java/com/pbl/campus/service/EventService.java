@@ -73,6 +73,7 @@ public class EventService {
                                                          EventCategory category,
                                                          EventStatus status,
                                                          String keyword,
+                                                         boolean availableOnly,
                                                          Long userId) {
         LambdaQueryWrapper<Event> wrapper = new LambdaQueryWrapper<Event>()
                 .eq(Event::getIsDeleted, false)
@@ -80,6 +81,13 @@ public class EventService {
                 .eq(status != null, Event::getStatus, status)
                 .like(StringUtils.hasText(keyword), Event::getTitle, keyword)
                 .orderByDesc(Event::getCreatedAt);
+
+        // 只看可报名：OPEN + 未截止 + 未满
+        if (availableOnly) {
+            wrapper.eq(Event::getStatus, EventStatus.OPEN)
+                   .ge(Event::getRegistrationDeadline, LocalDateTime.now())
+                   .apply("current_participants < max_participants");
+        }
 
         Page<Event> pageResult = eventMapper.selectPage(new Page<>(page, size), wrapper);
 

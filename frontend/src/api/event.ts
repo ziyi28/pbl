@@ -7,6 +7,7 @@ export function getEvents(params: {
   category?: EventCategory
   status?: EventStatus
   keyword?: string
+  availableOnly?: boolean
 }) {
   return request.get<any, Result<PageResult<EventItem>>>('/events', { params })
 }

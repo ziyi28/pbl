@@ -1,10 +1,15 @@
 <template>
-  <div class="event-card" @click="$router.push(`/events/${event.id}`)">
+  <div
+    class="event-card"
+    :class="{ 'is-interactive': interactive, 'is-static': !interactive }"
+    :role="interactive ? 'button' : undefined"
+    :tabindex="interactive ? 0 : undefined"
+    @click="handleClick"
+    @keydown.enter="handleClick"
+  >
     <!-- 封面区 -->
     <div class="card-cover" :style="coverStyle">
-      <!-- 有封面图时显示图片 -->
       <img v-if="event.coverImage" :src="event.coverImage" class="cover-img" :alt="event.title" />
-      <!-- 无封面图时：分类色块 + 图标 -->
       <template v-else>
         <el-icon :size="40" class="cover-icon"><component :is="categoryIcon" /></el-icon>
       </template>
@@ -12,7 +17,7 @@
       <!-- 状态徽章 -->
       <span class="status-badge" :class="statusClass">{{ statusLabel }}</span>
 
-      <!-- 已报名/已收藏标记 -->
+      <!-- 已报名标记 -->
       <span v-if="event.isRegistered" class="reg-badge">
         <el-icon :size="12"><Check /></el-icon>
         已报名
@@ -24,7 +29,6 @@
 
     <!-- 卡片内容 -->
     <div class="card-body">
-      <!-- 分类标签 + 发起人 -->
       <div class="card-meta-top">
         <span class="category-tag" :style="{ color: categoryColor }">
           {{ CategoryLabels[event.category] || event.category }}
@@ -32,10 +36,8 @@
         <span class="creator-name">{{ event.creatorName }}</span>
       </div>
 
-      <!-- 标题 -->
       <h3 class="card-title">{{ event.title }}</h3>
 
-      <!-- 信息行 -->
       <div class="card-info">
         <div class="info-row">
           <el-icon :size="14" class="info-icon"><Location /></el-icon>
@@ -66,7 +68,7 @@
           <span class="capacity-current">{{ event.currentParticipants }}</span>
           <span class="capacity-sep">/</span>
           <span class="capacity-max">{{ event.maxParticipants }}</span>
-          <span v-if="event.status === 'OPEN'" class="capacity-left">（余{{ remainingSlots(event) }}）</span>
+          <span v-if="showRemaining" class="capacity-left">（余{{ remainingSlots(event) }}）</span>
         </span>
       </div>
     </div>
@@ -75,6 +77,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   Location,
   Clock,
@@ -92,6 +95,8 @@ import {
   getStatusClass,
   progressPercent,
   remainingSlots,
+  isDeadlinePassed,
+  isFull,
   formatDate,
   formatDateTime,
   getCategoryColor,
@@ -99,7 +104,20 @@ import {
   CategoryLabels,
 } from '../utils/eventUtils'
 
-const props = defineProps<{ event: EventItem }>()
+const props = withDefaults(defineProps<{
+  event: EventItem
+  /** 是否可交互（点击跳转详情）。默认 true */
+  interactive?: boolean
+}>(), {
+  interactive: true,
+})
+
+const router = useRouter()
+
+function handleClick() {
+  if (!props.interactive) return
+  router.push(`/events/${props.event.id}`)
+}
 
 const categoryIcon = computed(() => {
   const map: Record<EventCategory, any> = {
@@ -115,16 +133,19 @@ const categoryIcon = computed(() => {
 const categoryColor = computed(() => getCategoryColor(props.event.category))
 
 const coverStyle = computed(() => {
-  if (props.event.coverImage) {
-    return {}
-  }
-  return {
-    backgroundColor: getCategoryBg(props.event.category),
-  }
+  if (props.event.coverImage) return {}
+  return { backgroundColor: getCategoryBg(props.event.category) }
 })
 
 const statusLabel = computed(() => getStatusLabel(props.event))
 const statusClass = computed(() => getStatusClass(props.event))
+
+/** 只在活动 OPEN 且未截止/未满时显示「余 X」 */
+const showRemaining = computed(() => {
+  return props.event.status === 'OPEN'
+    && !isDeadlinePassed(props.event)
+    && !isFull(props.event)
+})
 
 /** 报名截止是否临近（48小时内） */
 const isDeadlineClose = computed(() => {
@@ -147,7 +168,6 @@ const capacityLevel = computed(() => {
 <style scoped>
 /* ── 卡片整体 ────────────────────────── */
 .event-card {
-  cursor: pointer;
   border-radius: 10px;
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -157,9 +177,18 @@ const capacityLevel = computed(() => {
   flex-direction: column;
 }
 
-.event-card:hover {
+.event-card.is-interactive {
+  cursor: pointer;
+}
+
+.event-card.is-interactive:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+}
+
+.event-card.is-interactive:focus-visible {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 2px;
 }
 
 /* ── 封面区 ──────────────────────────── */

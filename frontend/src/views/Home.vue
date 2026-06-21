@@ -46,7 +46,6 @@
         <el-checkbox
           v-model="openOnly"
           class="filter-check"
-          @change="handleOpenOnlyChange"
         >
           只看可报名
         </el-checkbox>
@@ -56,7 +55,7 @@
     <!-- 活动卡片网格 -->
     <div class="event-grid" v-loading="loading">
       <EventCard
-        v-for="(event, index) in filteredEvents"
+        v-for="(event, index) in events"
         :key="event.id"
         :event="event"
         :style="{ animationDelay: `${index * 0.05}s` }"
@@ -65,7 +64,7 @@
     </div>
 
     <!-- 空状态 -->
-    <div class="empty-state" v-if="!loading && filteredEvents.length === 0">
+    <div class="empty-state" v-if="!loading && events.length === 0">
       <el-icon :size="48" class="empty-icon"><Calendar /></el-icon>
       <p class="empty-title">
         {{ events.length === 0 ? '暂无活动' : '没有符合条件的活动' }}
@@ -83,7 +82,7 @@
     </div>
 
     <!-- 分页 -->
-    <div class="pagination" v-if="total > 0 && !openOnly">
+    <div class="pagination" v-if="total > 0">
       <el-pagination
         v-model:current-page="page"
         :page-size="9"
@@ -93,19 +92,15 @@
         background
       />
     </div>
-    <div class="pagination-muted" v-if="openOnly && events.length > 9">
-      <span>当前为本地筛选模式，显示所有可报名活动</span>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { Search, Calendar } from '@element-plus/icons-vue'
 import { getEvents } from '../api/event'
 import EventCard from '../components/EventCard.vue'
 import { useUserStore } from '../stores/user'
-import { canRegister } from '../utils/eventUtils'
 import type { EventItem, EventCategory, EventStatus } from '../types'
 
 const userStore = useUserStore()
@@ -119,22 +114,8 @@ const category = ref<EventCategory | ''>('')
 const status = ref<EventStatus | ''>('')
 const openOnly = ref(false)
 
-/** 本地筛选：只看可报名 */
-const filteredEvents = computed(() => {
-  if (!openOnly.value) return events.value
-  return events.value.filter(canRegister)
-})
-
-function handleOpenOnlyChange(val: boolean) {
-  if (val) {
-    // 切换到本地筛选模式：多拉一些数据
-    loadMoreForLocal()
-  }
-}
-
 function resetAndLoad() {
   page.value = 1
-  openOnly.value = false
   loadEvents()
 }
 
@@ -147,6 +128,7 @@ async function loadEvents() {
       keyword: keyword.value || undefined,
       category: (category.value || undefined) as EventCategory | undefined,
       status: (status.value || undefined) as EventStatus | undefined,
+      availableOnly: openOnly.value || undefined,
     })
     events.value = res.data.records
     total.value = res.data.total
@@ -155,23 +137,8 @@ async function loadEvents() {
   }
 }
 
-/** 本地筛选模式下拉取更多数据（最多 200 条） */
-async function loadMoreForLocal() {
-  loading.value = true
-  try {
-    const res = await getEvents({
-      page: 1,
-      size: 200,
-      keyword: keyword.value || undefined,
-      category: (category.value || undefined) as EventCategory | undefined,
-      status: (status.value || undefined) as EventStatus | undefined,
-    })
-    events.value = res.data.records
-    total.value = res.data.total
-  } finally {
-    loading.value = false
-  }
-}
+// openOnly 切换时重新加载
+watch(openOnly, () => resetAndLoad())
 
 onMounted(() => loadEvents())
 </script>

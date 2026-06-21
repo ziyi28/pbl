@@ -161,7 +161,7 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { ArrowLeft, Plus, Loading } from '@element-plus/icons-vue'
 import { getEvent, updateEvent } from '../api/event'
 import { uploadFile, validateImageFile } from '../api/upload'
-import { StatusLabels, getStatusClass } from '../utils/eventUtils'
+import { StatusLabels, getStatusClass, toLocalDateTimeString } from '../utils/eventUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -286,9 +286,9 @@ async function handleSubmit() {
       description: form.description,
       category: form.category as any,
       location: form.location,
-      startTime: new Date(form.startTime).toISOString(),
-      endTime: new Date(form.endTime).toISOString(),
-      registrationDeadline: new Date(form.registrationDeadline).toISOString(),
+      startTime: toLocalDateTimeString(form.startTime),
+      endTime: toLocalDateTimeString(form.endTime),
+      registrationDeadline: toLocalDateTimeString(form.registrationDeadline),
       maxParticipants: form.maxParticipants,
       coverImage: form.coverImage || undefined,
     })

@@ -10,10 +10,10 @@
     </div>
 
     <div class="form-body">
-      <!-- ═══ 第1组：基础信息 ═══ -->
-      <section class="form-section">
-        <h2 class="section-title">基础信息</h2>
-        <el-form :model="form" :rules="rules" ref="formRef" label-position="top">
+      <el-form :model="form" :rules="rules" ref="formRef" label-position="top">
+        <!-- ═══ 第1组：基础信息 ═══ -->
+        <section class="form-section">
+          <h2 class="section-title">基础信息</h2>
           <el-form-item label="活动标题" prop="title">
             <el-input v-model="form.title" placeholder="给活动取一个清晰的名字" maxlength="100" show-word-limit />
           </el-form-item>
@@ -36,13 +36,11 @@
               </el-form-item>
             </el-col>
           </el-row>
-        </el-form>
-      </section>
+        </section>
 
-      <!-- ═══ 第2组：时间规则 ═══ -->
-      <section class="form-section">
-        <h2 class="section-title">时间规则</h2>
-        <el-form :model="form" :rules="rules" ref="formRef2" label-position="top">
+        <!-- ═══ 第2组：时间规则 ═══ -->
+        <section class="form-section">
+          <h2 class="section-title">时间规则</h2>
           <el-row :gutter="16">
             <el-col :xs="24" :sm="12">
               <el-form-item label="开始时间" prop="startTime">
@@ -67,23 +65,18 @@
               </el-form-item>
             </el-col>
           </el-row>
-        </el-form>
-      </section>
+        </section>
 
-      <!-- ═══ 第3组：封面与详情 ═══ -->
-      <section class="form-section">
-        <h2 class="section-title">封面与详情</h2>
-        <el-form :model="form" :rules="rules" ref="formRef3" label-position="top">
-          <!-- 封面上传 -->
+        <!-- ═══ 第3组：封面与详情 ═══ -->
+        <section class="form-section">
+          <h2 class="section-title">封面与详情</h2>
           <el-form-item label="封面图片">
             <div class="cover-upload-area">
               <div class="cover-upload-left">
-                <!-- 已有预览 -->
                 <div v-if="coverPreview" class="cover-preview">
                   <img :src="coverPreview" alt="封面预览" />
                   <button class="cover-remove" @click="removeCover">✕</button>
                 </div>
-                <!-- 上传按钮 -->
                 <div v-else class="cover-placeholder" @click="triggerUpload">
                   <el-icon :size="28"><Plus /></el-icon>
                   <span>上传封面</span>
@@ -118,14 +111,14 @@
               show-word-limit
             />
           </el-form-item>
-        </el-form>
-      </section>
+        </section>
+      </el-form>
 
       <!-- ═══ 第4组：预览确认 ═══ -->
       <section class="form-section" v-if="form.title">
         <h2 class="section-title">预览确认</h2>
         <div class="preview-card">
-          <EventCard :event="previewEvent" />
+          <EventCard :event="previewEvent" :interactive="false" />
         </div>
       </section>
 
@@ -189,6 +182,14 @@ const previewEvent = computed<EventItem>(() => ({
   createdAt: '',
 }))
 
+const validateStartTime = (_rule: any, value: any, callback: any) => {
+  if (value && new Date(value) <= new Date()) {
+    callback(new Error('开始时间必须晚于当前时间'))
+  } else {
+    callback()
+  }
+}
+
 const validateEndTime = (_rule: any, value: any, callback: any) => {
   if (form.startTime && value && new Date(value) <= new Date(form.startTime)) {
     callback(new Error('结束时间必须晚于开始时间'))
@@ -210,7 +211,10 @@ const rules: FormRules = {
   description: [{ required: true, message: '请输入活动描述', trigger: 'blur' }],
   category: [{ required: true, message: '请选择分类', trigger: 'change' }],
   location: [{ required: true, message: '请输入活动地点', trigger: 'blur' }],
-  startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
+  startTime: [
+    { required: true, message: '请选择开始时间', trigger: 'change' },
+    { validator: validateStartTime, trigger: 'change' },
+  ],
   endTime: [
     { required: true, message: '请选择结束时间', trigger: 'change' },
     { validator: validateEndTime, trigger: 'change' },
@@ -220,6 +224,13 @@ const rules: FormRules = {
     { validator: validateDeadline, trigger: 'change' },
   ],
   maxParticipants: [{ required: true, message: '请输入人数上限', trigger: 'change' }],
+}
+
+/** 将 Date 转为本地时间字符串 YYYY-MM-DDTHH:mm:ss */
+function toLocalDateTimeString(val: string | Date): string {
+  const d = new Date(val)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
 function triggerUpload() {
@@ -259,7 +270,6 @@ function removeCover() {
 }
 
 async function handleSubmit() {
-  // 校验所有表单
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
@@ -270,9 +280,9 @@ async function handleSubmit() {
       description: form.description,
       category: form.category as any,
       location: form.location,
-      startTime: new Date(form.startTime).toISOString(),
-      endTime: new Date(form.endTime).toISOString(),
-      registrationDeadline: new Date(form.registrationDeadline).toISOString(),
+      startTime: toLocalDateTimeString(form.startTime),
+      endTime: toLocalDateTimeString(form.endTime),
+      registrationDeadline: toLocalDateTimeString(form.registrationDeadline),
       maxParticipants: form.maxParticipants,
       coverImage: form.coverImage || undefined,
     })
