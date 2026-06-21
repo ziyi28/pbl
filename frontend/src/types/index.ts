@@ -11,7 +11,7 @@ export interface User {
 
 // 活动相关类型
 export type EventCategory = 'LECTURE' | 'SPORTS' | 'CLUB' | 'VOLUNTEER' | 'OTHER'
-export type EventStatus = 'OPEN' | 'ONGOING' | 'ENDED'
+export type EventStatus = 'OPEN' | 'ONGOING' | 'ENDED' | 'CANCELLED'
 
 export interface EventItem {
   id: number
@@ -116,6 +116,17 @@ export interface UserUpdateRequest {
   bio?: string
 }
 
+// 通知类型
+export interface NotificationItem {
+  id: number
+  title: string
+  content: string
+  type: string
+  isRead: boolean
+  relatedEventId: number | null
+  createdAt: string
+}
+
 // 登录响应
 export interface LoginResponse {
   token: string
@@ -137,4 +148,5 @@ export const StatusMap: Record<EventStatus, string> = {
   OPEN: '报名中',
   ONGOING: '进行中',
   ENDED: '已结束',
+  CANCELLED: '已取消',
 }

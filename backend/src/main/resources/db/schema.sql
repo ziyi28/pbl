@@ -91,6 +91,21 @@ CREATE TABLE IF NOT EXISTS `comment_like` (
     KEY `idx_comment_id` (`comment_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论点赞表';
 
+-- 通知表
+CREATE TABLE IF NOT EXISTS `notification` (
+    `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '通知 ID',
+    `user_id`          BIGINT       NOT NULL COMMENT '用户 ID',
+    `title`            VARCHAR(100) NOT NULL COMMENT '通知标题',
+    `content`          VARCHAR(500) NOT NULL COMMENT '通知内容',
+    `type`             VARCHAR(30)  NOT NULL COMMENT '通知类型: REGISTRATION_SUCCESS/REGISTRATION_CANCELLED/EVENT_CANCELLED/EVENT_UPDATED',
+    `is_read`          TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '是否已读: 0-未读 1-已读',
+    `related_event_id` BIGINT       NULL     COMMENT '关联活动 ID',
+    `created_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_is_read` (`is_read`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知表';
+
 -- 插入默认管理员（密码: admin123，BCrypt 加密）
 INSERT INTO `user` (`username`, `password`, `email`, `role`)
 VALUES ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'admin@campus.com', 'ADMIN');

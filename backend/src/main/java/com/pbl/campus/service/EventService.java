@@ -17,10 +17,13 @@ import com.pbl.campus.mapper.EventMapper;
 import com.pbl.campus.mapper.FavoriteMapper;
 import com.pbl.campus.mapper.RegistrationMapper;
 import com.pbl.campus.mapper.UserMapper;
+import com.pbl.campus.entity.Notification;
+import com.pbl.campus.mapper.NotificationMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -34,6 +37,7 @@ public class EventService {
     private final UserMapper userMapper;
     private final RegistrationMapper registrationMapper;
     private final FavoriteMapper favoriteMapper;
+    private final NotificationMapper notificationMapper;
 
     public Result<EventResponse> createEvent(Long creatorId, EventCreateRequest request) {
         // 校验时间
@@ -66,22 +70,17 @@ public class EventService {
         if (event == null || event.getIsDeleted()) {
             return Result.error(404, "活动不存在");
         }
-        EventResponse response = toResponse(event);
-        if (userId != null) {
-            response.setIsRegistered(registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
-                    .eq(Registration::getUserId, userId)
-                    .eq(Registration::getEventId, id)) > 0);
-            response.setIsFavorited(favoriteMapper.selectCount(new LambdaQueryWrapper<Favorite>()
-                    .eq(Favorite::getUserId, userId)
-                    .eq(Favorite::getEventId, id)) > 0);
-        }
-        return Result.success(response);
+        return Result.success(toResponse(event, userId));
     }
 
     public Result<PageResult<EventResponse>> listEvents(int page, int size,
                                                          EventCategory category,
                                                          EventStatus status,
-                                                         String keyword) {
+                                                         String keyword,
+                                                         boolean availableOnly,
+                                                         boolean fullOnly,
+                                                         boolean deadlinePassedOnly,
+                                                         Long userId) {
         LambdaQueryWrapper<Event> wrapper = new LambdaQueryWrapper<Event>()
                 .eq(Event::getIsDeleted, false)
                 .eq(category != null, Event::getCategory, category)
@@ -89,10 +88,29 @@ public class EventService {
                 .like(StringUtils.hasText(keyword), Event::getTitle, keyword)
                 .orderByDesc(Event::getCreatedAt);
 
+        // 只看可报名：OPEN + 未截止 + 未满
+        if (availableOnly) {
+            wrapper.eq(Event::getStatus, EventStatus.OPEN)
+                   .ge(Event::getRegistrationDeadline, LocalDateTime.now())
+                   .apply("current_participants < max_participants");
+        }
+
+        // 只看已满：OPEN + 名额已满
+        if (fullOnly) {
+            wrapper.eq(Event::getStatus, EventStatus.OPEN)
+                   .apply("current_participants >= max_participants");
+        }
+
+        // 只看已截止：OPEN + 报名已截止
+        if (deadlinePassedOnly) {
+            wrapper.eq(Event::getStatus, EventStatus.OPEN)
+                   .lt(Event::getRegistrationDeadline, LocalDateTime.now());
+        }
+
         Page<Event> pageResult = eventMapper.selectPage(new Page<>(page, size), wrapper);
 
         List<EventResponse> records = pageResult.getRecords().stream()
-                .map(this::toResponse)
+                .map(event -> toResponse(event, userId))
                 .toList();
 
         PageResult<EventResponse> result = new PageResult<>(
@@ -108,8 +126,8 @@ public class EventService {
         if (!isAdmin && !event.getCreatorId().equals(userId)) {
             return Result.error(403, "无权编辑该活动");
         }
-        if (event.getStatus() == EventStatus.ENDED) {
-            return Result.error("已结束的活动不可编辑");
+        if (event.getStatus() == EventStatus.ENDED || event.getStatus() == EventStatus.CANCELLED) {
+            return Result.error("已结束或已取消的活动不可编辑");
         }
         if (request.getMaxParticipants() != null
                 && request.getMaxParticipants() < event.getCurrentParticipants()) {
@@ -140,6 +158,21 @@ public class EventService {
         if (request.getCoverImage() != null) event.setCoverImage(request.getCoverImage());
 
         eventMapper.updateById(event);
+
+        // 通知所有已报名用户活动信息有更新
+        List<Registration> registrations = registrationMapper.selectList(
+                new LambdaQueryWrapper<Registration>()
+                        .eq(Registration::getEventId, id));
+        for (Registration reg : registrations) {
+            Notification notification = new Notification();
+            notification.setUserId(reg.getUserId());
+            notification.setTitle("活动信息更新");
+            notification.setContent("您报名的活动「" + event.getTitle() + "」信息已更新，请查看最新详情");
+            notification.setType("EVENT_UPDATED");
+            notification.setRelatedEventId(id);
+            notificationMapper.insert(notification);
+        }
+
         return Result.success("活动更新成功", toResponse(event));
     }
 
@@ -156,13 +189,13 @@ public class EventService {
     }
 
     /**
-     * 定时任务：每分钟检查并自动更新活动状态
+     * 定时任务：每分钟检查并自动更新活动状态（跳过已取消的活动）
      */
     @Scheduled(fixedRate = 60000)
     public void autoUpdateEventStatus() {
         LocalDateTime now = LocalDateTime.now();
 
-        // 报名中 → 进行中
+        // 报名中 → 进行中（跳过 CANCELLED）
         eventMapper.selectList(new LambdaQueryWrapper<Event>()
                 .eq(Event::getStatus, EventStatus.OPEN)
                 .eq(Event::getIsDeleted, false)
@@ -183,12 +216,63 @@ public class EventService {
                 });
     }
 
+    /**
+     * 取消活动
+     */
+    @Transactional
+    public Result<Void> cancelEvent(Long id, Long userId, boolean isAdmin) {
+        Event event = eventMapper.selectById(id);
+        if (event == null || event.getIsDeleted()) {
+            return Result.error(404, "活动不存在");
+        }
+        if (!isAdmin && !event.getCreatorId().equals(userId)) {
+            return Result.error(403, "无权取消该活动");
+        }
+        if (event.getStatus() == EventStatus.CANCELLED) {
+            return Result.error("活动已被取消");
+        }
+        if (event.getStatus() == EventStatus.ENDED) {
+            return Result.error("已结束的活动不可取消");
+        }
+
+        event.setStatus(EventStatus.CANCELLED);
+        eventMapper.updateById(event);
+
+        // 通知所有已报名用户
+        List<Registration> registrations = registrationMapper.selectList(
+                new LambdaQueryWrapper<Registration>()
+                        .eq(Registration::getEventId, id));
+        for (Registration reg : registrations) {
+            Notification notification = new Notification();
+            notification.setUserId(reg.getUserId());
+            notification.setTitle("活动已取消");
+            notification.setContent("您报名的活动「" + event.getTitle() + "」已被取消，报名记录已保留");
+            notification.setType("EVENT_CANCELLED");
+            notification.setRelatedEventId(id);
+            notificationMapper.insert(notification);
+        }
+
+        return Result.success("活动已取消", null);
+    }
+
     private EventResponse toResponse(Event event) {
+        return toResponse(event, null);
+    }
+
+    private EventResponse toResponse(Event event, Long userId) {
         EventResponse response = new EventResponse();
         BeanUtils.copyProperties(event, response);
         User creator = userMapper.selectById(event.getCreatorId());
         if (creator != null) {
             response.setCreatorName(creator.getUsername());
+        }
+        if (userId != null) {
+            response.setIsRegistered(registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
+                    .eq(Registration::getUserId, userId)
+                    .eq(Registration::getEventId, event.getId())) > 0);
+            response.setIsFavorited(favoriteMapper.selectCount(new LambdaQueryWrapper<Favorite>()
+                    .eq(Favorite::getUserId, userId)
+                    .eq(Favorite::getEventId, event.getId())) > 0);
         }
         return response;
     }

@@ -9,7 +9,8 @@ public enum EventStatus {
 
     OPEN("OPEN", "报名中"),
     ONGOING("ONGOING", "进行中"),
-    ENDED("ENDED", "已结束");
+    ENDED("ENDED", "已结束"),
+    CANCELLED("CANCELLED", "已取消");
 
     @EnumValue
     @JsonValue

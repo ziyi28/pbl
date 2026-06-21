@@ -17,11 +17,13 @@ import com.pbl.campus.service.RegistrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -36,14 +38,19 @@ public class EventController {
     private final FavoriteService favoriteService;
 
     @GetMapping
-    @Operation(summary = "查询活动列表", description = "分页查询活动列表，支持分类、状态、关键词筛选")
+    @Operation(summary = "查询活动列表", description = "分页查询活动列表，支持分类、状态、关键词、可报名、已满、已截止筛选。登录时返回当前用户的报名/收藏状态。")
     public Result<PageResult<EventResponse>> listEvents(
             @Parameter(description = "页码，默认1") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页大小，默认10") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "活动分类") @RequestParam(required = false) EventCategory category,
             @Parameter(description = "活动状态") @RequestParam(required = false) EventStatus status,
-            @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword) {
-        return eventService.listEvents(page, size, category, status, keyword);
+            @Parameter(description = "关键词搜索") @RequestParam(required = false) String keyword,
+            @Parameter(description = "仅显示可报名的活动") @RequestParam(defaultValue = "false") boolean availableOnly,
+            @Parameter(description = "仅显示名额已满的活动") @RequestParam(defaultValue = "false") boolean fullOnly,
+            @Parameter(description = "仅显示报名已截止的活动") @RequestParam(defaultValue = "false") boolean deadlinePassedOnly,
+            Authentication authentication) {
+        Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
+        return eventService.listEvents(page, size, category, status, keyword, availableOnly, fullOnly, deadlinePassedOnly, userId);
     }
 
     @GetMapping("/{id}")
@@ -79,6 +86,26 @@ public class EventController {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         return eventService.deleteEvent(id, userId, isAdmin);
+    }
+
+    @PutMapping("/{id}/cancel")
+    @Operation(summary = "取消活动", description = "管理员或创建者取消活动，保留报名记录并通知已报名用户")
+    public Result<Void> cancelEvent(Authentication authentication, @Parameter(description = "活动ID") @PathVariable Long id) {
+        Long userId = (Long) authentication.getPrincipal();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return eventService.cancelEvent(id, userId, isAdmin);
+    }
+
+    @GetMapping("/{id}/participants/export")
+    @Operation(summary = "导出报名名单", description = "管理员或创建者导出CSV格式的报名名单")
+    public void exportParticipants(Authentication authentication,
+                                   @Parameter(description = "活动ID") @PathVariable Long id,
+                                   HttpServletResponse response) throws IOException {
+        Long userId = (Long) authentication.getPrincipal();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        registrationService.exportParticipants(id, userId, isAdmin, response);
     }
 
     @PostMapping("/{id}/registrations")

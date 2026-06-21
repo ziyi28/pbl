@@ -7,6 +7,9 @@ export function getEvents(params: {
   category?: EventCategory
   status?: EventStatus
   keyword?: string
+  availableOnly?: boolean
+  fullOnly?: boolean
+  deadlinePassedOnly?: boolean
 }) {
   return request.get<any, Result<PageResult<EventItem>>>('/events', { params })
 }
@@ -42,4 +45,15 @@ export function getMyRegistrations() {
 
 export function getEventParticipants(eventId: number) {
   return request.get<any, Result<Participant[]>>(`/events/${eventId}/participants`)
+}
+
+export function cancelEvent(eventId: number) {
+  return request.put<any, Result<void>>(`/events/${eventId}/cancel`)
+}
+
+export function exportParticipants(eventId: number) {
+  // 使用 blob 下载 CSV 文件
+  return request.get(`/events/${eventId}/participants/export`, {
+    responseType: 'blob',
+  })
 }

@@ -21,10 +21,6 @@
             style="display: none"
             @change="handleAvatarUpload"
           />
-          <span class="uploading-hint" v-if="avatarUploading">
-            <el-icon class="is-loading" :size="14"><Loading /></el-icon>
-            上传中…
-          </span>
         </div>
 
         <!-- 用户元信息 -->
@@ -36,8 +32,24 @@
             </span>
             <span class="join-date">
               <el-icon :size="14"><Calendar /></el-icon>
-              加入于 {{ formatDate(userStore.user?.createdAt) }}
+              加入于 {{ formatJoinDate(userStore.user?.createdAt) }}
             </span>
+          </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-num">{{ stats.registrations }}</span>
+            <span class="stat-label">报名</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num">{{ stats.upcoming }}</span>
+            <span class="stat-label">即将开始</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num">{{ stats.favorites }}</span>
+            <span class="stat-label">收藏</span>
           </div>
         </div>
       </div>
@@ -45,42 +57,58 @@
 
     <!-- ── 主体双栏 ────────────────────── -->
     <div class="profile-body">
-      <!-- 左侧：编辑资料 -->
+      <!-- 左侧：编辑资料 + 管理入口 -->
       <aside class="profile-sidebar">
-        <el-card class="edit-card" shadow="never">
+        <el-card class="side-card" shadow="never">
           <template #header>
             <div class="card-header-row">
-              <el-icon :size="16"><Edit /></el-icon>
+              <el-icon :size="15"><Edit /></el-icon>
               <span>编辑资料</span>
             </div>
           </template>
           <el-form :model="profileForm" label-position="top" v-if="userStore.user">
             <el-form-item label="邮箱">
-              <el-input
-                v-model="profileForm.email"
-                placeholder="your@email.com"
-                class="profile-input"
-              />
+              <el-input v-model="profileForm.email" placeholder="your@email.com" />
             </el-form-item>
             <el-form-item label="个人简介">
               <el-input
                 v-model="profileForm.bio"
                 type="textarea"
-                :rows="5"
+                :rows="4"
                 placeholder="介绍一下你自己…"
                 maxlength="200"
                 show-word-limit
-                class="profile-textarea"
               />
             </el-form-item>
-            <el-button class="save-btn" @click="handleUpdateProfile" :loading="saving">
-              保存修改
-            </el-button>
+            <button class="save-btn" @click="handleUpdateProfile" :disabled="saving">
+              {{ saving ? '保存中…' : '保存修改' }}
+            </button>
           </el-form>
+        </el-card>
+
+        <!-- 管理员入口 -->
+        <el-card v-if="userStore.isAdmin" class="side-card admin-panel" shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <el-icon :size="15"><Setting /></el-icon>
+              <span>管理控制台</span>
+            </div>
+          </template>
+          <p class="admin-desc">你拥有管理员权限，可以创建和管理所有活动。</p>
+          <div class="admin-links">
+            <button class="admin-link-btn admin-link-primary" @click="$router.push('/events/create')">
+              <el-icon :size="14"><Plus /></el-icon>
+              发布新活动
+            </button>
+            <button class="admin-link-btn" @click="$router.push('/')">
+              <el-icon :size="14"><List /></el-icon>
+              管理活动大厅
+            </button>
+          </div>
         </el-card>
       </aside>
 
-      <!-- 右侧：报名 / 收藏 -->
+      <!-- 右侧：报名 / 收藏列表 -->
       <section class="profile-main">
         <el-card class="tabs-card" shadow="never">
           <!-- 胶囊标签 -->
@@ -91,7 +119,6 @@
                 :class="{ active: activeTab === 'registrations' }"
                 @click="switchTab('registrations')"
               >
-                <el-icon :size="15"><Ticket /></el-icon>
                 <span>我的报名</span>
                 <span v-if="regCount > 0" class="pill-count">{{ regCount }}</span>
               </button>
@@ -100,7 +127,6 @@
                 :class="{ active: activeTab === 'favorites' }"
                 @click="switchTab('favorites')"
               >
-                <el-icon :size="15"><StarFilled /></el-icon>
                 <span>我的收藏</span>
                 <span v-if="favCount > 0" class="pill-count">{{ favCount }}</span>
               </button>
@@ -109,31 +135,79 @@
 
           <!-- 内容区 -->
           <div class="tab-content" v-loading="listLoading">
-            <transition-group
-              name="card-list"
-              tag="div"
-              class="event-grid"
-              v-if="myEvents.length > 0"
-            >
-              <EventCard
-                v-for="(event, index) in myEvents"
+            <template v-if="myEvents.length > 0">
+              <div
+                class="list-item"
+                v-for="event in myEvents"
                 :key="event.id"
-                :event="event"
-                :style="{ animationDelay: `${index * 0.06}s` }"
-                class="stagger-fade-in"
-              />
-            </transition-group>
+                @click="$router.push(`/events/${event.id}`)"
+              >
+                <!-- 封面缩略图 -->
+                <div class="item-cover" :style="{ backgroundColor: getCategoryBg(event.category) }">
+                  <img v-if="event.coverImage" :src="event.coverImage" :alt="event.title" />
+                  <el-icon v-else :size="22" class="item-cover-icon">
+                    <component :is="getCategoryIcon(event.category)" />
+                  </el-icon>
+                </div>
 
-            <!-- 空状态 —— 线性图标 + 引导 -->
+                <!-- 信息 -->
+                <div class="item-body">
+                  <div class="item-top">
+                    <span class="item-status" :class="getStatusClass(event)">
+                      {{ getStatusLabel(event) }}
+                    </span>
+                    <span class="item-category">{{ CategoryLabels[event.category] || event.category }}</span>
+                  </div>
+                  <h4 class="item-title">{{ event.title }}</h4>
+                  <div class="item-meta">
+                    <span class="item-meta-text">
+                      <el-icon :size="13"><Clock /></el-icon>
+                      {{ formatDate(event.startTime) }}
+                    </span>
+                    <span class="item-meta-text">
+                      <el-icon :size="13"><Location /></el-icon>
+                      {{ event.location }}
+                    </span>
+                  </div>
+                  <div class="item-info" v-if="activeTab === 'registrations'">
+                    <span class="item-people">{{ event.currentParticipants }}/{{ event.maxParticipants }} 人</span>
+                  </div>
+                </div>
+
+                <!-- 快速操作 -->
+                <div class="item-actions" @click.stop>
+                  <template v-if="activeTab === 'registrations'">
+                    <button
+                      v-if="canRegister(event) || (event.isRegistered && event.status === 'OPEN')"
+                      class="item-action-btn item-action-danger"
+                      @click="handleQuickCancelReg(event)"
+                    >
+                      取消报名
+                    </button>
+                  </template>
+                  <template v-else>
+                    <button
+                      class="item-action-btn"
+                      @click="handleQuickUnfavorite(event)"
+                    >
+                      取消收藏
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <!-- 空状态 -->
             <div class="empty-state" v-else>
-              <el-icon :size="44" class="empty-icon"><Calendar /></el-icon>
+              <el-icon :size="40" class="empty-icon">
+                <Ticket v-if="activeTab === 'registrations'" />
+                <StarFilled v-else />
+              </el-icon>
               <p class="empty-text">
                 {{ activeTab === 'registrations' ? '还没有报名任何活动' : '还没有收藏任何活动' }}
               </p>
               <p class="empty-hint">
-                {{ activeTab === 'registrations'
-                    ? '去活动大厅发现感兴趣的活动吧'
-                    : '收藏喜欢的活动，方便随时查看' }}
+                {{ activeTab === 'registrations' ? '去活动大厅发现感兴趣的活动吧' : '收藏喜欢的活动，方便随时查看' }}
               </p>
               <button class="empty-action" @click="$router.push('/')">探索活动</button>
             </div>
@@ -146,15 +220,22 @@
 
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Calendar, Edit, StarFilled, Ticket, Camera, Loading } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  Calendar, Edit, StarFilled, Ticket, Camera, Setting,
+  Plus, List, Clock, Location,
+  Microphone, TrophyBase, UserFilled, MoreFilled,
+} from '@element-plus/icons-vue'
 import { updateCurrentUser } from '../api/auth'
-import { getMyRegistrations } from '../api/event'
-import { getMyFavorites } from '../api/favorite'
+import { getMyRegistrations, cancelRegistration } from '../api/event'
+import { getMyFavorites, removeFavorite } from '../api/favorite'
 import { uploadFile, validateImageFile } from '../api/upload'
 import { useUserStore } from '../stores/user'
-import EventCard from '../components/EventCard.vue'
-import type { EventItem } from '../types'
+import {
+  canRegister, getStatusLabel, getStatusClass,
+  getCategoryBg, formatDate, CategoryLabels,
+} from '../utils/eventUtils'
+import type { EventItem, EventCategory } from '../types'
 
 const userStore = useUserStore()
 
@@ -167,12 +248,28 @@ const activeTab = ref('registrations')
 const myEvents = ref<EventItem[]>([])
 const listLoading = ref(false)
 const saving = ref(false)
-const avatarUploading = ref(false)
 const avatarInput = ref<HTMLInputElement | null>(null)
 const regCount = ref(0)
 const favCount = ref(0)
 
-function formatDate(dateStr?: string) {
+const stats = reactive({
+  registrations: 0,
+  upcoming: 0,
+  favorites: 0,
+})
+
+function getCategoryIcon(category: EventCategory) {
+  const map: Record<EventCategory, any> = {
+    LECTURE: Microphone,
+    SPORTS: TrophyBase,
+    CLUB: UserFilled,
+    VOLUNTEER: StarFilled,
+    OTHER: MoreFilled,
+  }
+  return map[category] ?? MoreFilled
+}
+
+function formatJoinDate(dateStr?: string) {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('zh-CN', {
     year: 'numeric',
@@ -193,21 +290,19 @@ async function handleAvatarUpload(e: Event) {
   const msg = validateImageFile(file)
   if (msg) {
     ElMessage.error(msg)
-    if (target) target.value = ''
+    target.value = ''
     return
   }
 
-  avatarUploading.value = true
   try {
     const res = await uploadFile(file)
     await updateCurrentUser({ avatar: res.data })
     await userStore.fetchUser()
     ElMessage.success('头像更新成功')
   } catch {
-    ElMessage.error('头像上传失败，请重试')
+    ElMessage.error('头像上传失败')
   } finally {
-    avatarUploading.value = false
-    if (target) target.value = ''
+    target.value = ''
   }
 }
 
@@ -230,6 +325,10 @@ async function loadRegistrations() {
     const res = await getMyRegistrations()
     myEvents.value = res.data
     regCount.value = res.data.length
+    stats.registrations = res.data.length
+    stats.upcoming = res.data.filter(
+      (e: EventItem) => e.status === 'OPEN' && new Date(e.startTime) > new Date()
+    ).length
   } finally {
     listLoading.value = false
   }
@@ -241,6 +340,7 @@ async function loadFavorites() {
     const res = await getMyFavorites()
     myEvents.value = res.data
     favCount.value = res.data.length
+    stats.favorites = res.data.length
   } finally {
     listLoading.value = false
   }
@@ -252,6 +352,37 @@ function switchTab(tab: string) {
   else loadFavorites()
 }
 
+/** 快速取消报名 */
+async function handleQuickCancelReg(event: EventItem) {
+  try {
+    await ElMessageBox.confirm('确定取消报名吗？', '确认取消', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '再想想',
+    })
+  } catch {
+    return
+  }
+  try {
+    await cancelRegistration(event.id)
+    ElMessage.success('已取消报名')
+    loadRegistrations()
+  } catch {
+    /* interceptor handles */
+  }
+}
+
+/** 快速取消收藏 */
+async function handleQuickUnfavorite(event: EventItem) {
+  try {
+    await removeFavorite(event.id)
+    ElMessage.success('已取消收藏')
+    loadFavorites()
+  } catch {
+    /* interceptor handles */
+  }
+}
+
 onMounted(async () => {
   await userStore.fetchUser()
   if (userStore.user) {
@@ -261,14 +392,15 @@ onMounted(async () => {
   loadRegistrations()
   getMyFavorites().then((res) => {
     favCount.value = res.data.length
+    stats.favorites = res.data.length
   })
 })
 </script>
 
 <style scoped>
-/* ================================================
-   Hero —— 深色纯色背景
-   ================================================ */
+/* ════════════════════════════════════════
+   Hero
+   ════════════════════════════════════════ */
 .profile-hero {
   margin: -80px -20px 0;
   padding-top: 80px;
@@ -279,10 +411,11 @@ onMounted(async () => {
 .hero-content {
   max-width: 960px;
   margin: 0 auto;
-  padding: 32px 20px 36px;
+  padding: 28px 20px 32px;
   display: flex;
   align-items: center;
   gap: 24px;
+  flex-wrap: wrap;
 }
 
 /* ── 头像 ────────────────────────────── */
@@ -290,13 +423,12 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
   flex-shrink: 0;
 }
 
 .avatar-wrapper {
-  width: 88px;
-  height: 88px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   position: relative;
   cursor: pointer;
@@ -306,7 +438,7 @@ onMounted(async () => {
 }
 
 .avatar-wrapper:hover {
-  border-color: var(--c-primary);
+  border-color: #B45309;
 }
 
 .avatar-wrapper:hover .avatar-overlay {
@@ -327,9 +459,8 @@ onMounted(async () => {
   justify-content: center;
   background: #B45309;
   color: #FFFFFF;
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
-  font-family: var(--font-heading);
 }
 
 .avatar-overlay {
@@ -344,45 +475,34 @@ onMounted(async () => {
   color: #FFFFFF;
 }
 
-.uploading-hint {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
 /* ── 用户元信息 ──────────────────────── */
 .user-meta {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .username-display {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
   color: #FFFFFF;
-  font-family: var(--font-heading);
-  letter-spacing: -0.2px;
   line-height: 1.2;
+  letter-spacing: -0.2px;
 }
 
 .meta-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-/* 角色徽章 —— 小药丸 */
 .role-badge {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 10px;
   font-size: 12px;
   font-weight: 500;
-  line-height: 1.6;
   background: rgba(255, 255, 255, 0.1);
   color: #A1A1AA;
 }
@@ -392,18 +512,45 @@ onMounted(async () => {
   color: #B45309;
 }
 
-/* 加入时间 */
 .join-date {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   font-size: 13px;
   color: #A1A1AA;
 }
 
-/* ================================================
-   Body —— 双栏布局
-   ================================================ */
+/* ── 统计卡片 ────────────────────────── */
+.stats-row {
+  display: flex;
+  gap: 20px;
+  margin-left: auto;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ════════════════════════════════════════
+   Body
+   ════════════════════════════════════════ */
 .profile-body {
   max-width: 960px;
   margin: 24px auto 40px;
@@ -414,8 +561,11 @@ onMounted(async () => {
 }
 
 .profile-sidebar {
-  width: 230px;
+  width: 220px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .profile-main {
@@ -423,82 +573,105 @@ onMounted(async () => {
   min-width: 0;
 }
 
-/* ================================================
-   左侧编辑资料卡片
-   ================================================ */
-.edit-card {
+/* ── 侧栏卡片 ────────────────────────── */
+.side-card {
   border-radius: var(--radius-md) !important;
   border: 1px solid var(--c-border) !important;
   box-shadow: var(--shadow-sm) !important;
 }
 
-.edit-card :deep(.el-card__header) {
-  padding: 14px 18px;
+.side-card :deep(.el-card__header) {
+  padding: 12px 16px;
   border-bottom: 1px solid var(--c-border-light);
 }
 
-.edit-card :deep(.el-card__body) {
-  padding: 18px;
+.side-card :deep(.el-card__body) {
+  padding: 16px;
 }
 
 .card-header-row {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 15px;
+  gap: 6px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--c-text);
 }
 
-/* 统一输入框样式 */
-:deep(.profile-input .el-input__wrapper),
-:deep(.profile-textarea .el-textarea__inner) {
-  border-radius: var(--radius-sm) !important;
-  border: 1px solid var(--c-border) !important;
-  box-shadow: none !important;
-  background: #FAFAFA;
-  font-size: 13px;
-  color: var(--c-text);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-:deep(.profile-input .el-input__wrapper.is-focus),
-:deep(.profile-textarea .el-textarea__inner:focus) {
-  border-color: var(--c-primary) !important;
-  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.1) !important;
-}
-
-:deep(.profile-input .el-input__wrapper .el-input__inner::placeholder),
-:deep(.profile-textarea .el-textarea__inner::placeholder) {
-  color: #C4C4C8;
-}
-
-:deep(.profile-textarea .el-textarea__inner) {
-  resize: none;
-  line-height: 1.6;
-}
-
-/* 保存按钮 —— 强调色 */
 .save-btn {
   width: 100%;
-  height: 38px;
+  height: 36px;
   border-radius: var(--radius-sm) !important;
   background: #B45309 !important;
   border: none !important;
   color: #FFFFFF !important;
   font-weight: 600;
   font-size: 13px;
-  margin-top: 4px;
+  cursor: pointer;
+  font-family: var(--font-base);
   transition: background 0.2s ease;
 }
 
-.save-btn:hover {
+.save-btn:hover:not(:disabled) {
   background: #D97742 !important;
 }
 
-/* ================================================
-   右侧选项卡卡片
-   ================================================ */
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 管理员链接 */
+.admin-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--c-text-light);
+  cursor: pointer;
+  font-family: var(--font-base);
+  transition: all 0.2s ease;
+}
+
+.admin-link-btn:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+}
+
+.admin-link-primary {
+  background: #B45309;
+  color: #FFFFFF;
+  border-color: #B45309;
+}
+
+.admin-link-primary:hover {
+  background: #D97742;
+  border-color: #D97742;
+  color: #FFFFFF;
+}
+
+.admin-desc {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  line-height: 1.6;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+/* ════════════════════════════════════════
+   选项卡卡片
+   ════════════════════════════════════════ */
 .tabs-card {
   border-radius: var(--radius-md) !important;
   border: 1px solid var(--c-border) !important;
@@ -509,12 +682,10 @@ onMounted(async () => {
   padding: 0;
 }
 
-/* ── 胶囊标签组 ──────────────────────── */
 .tabs-header {
   display: flex;
   justify-content: center;
-  padding: 16px 20px 0;
-  border-bottom: none;
+  padding: 14px 20px 0;
 }
 
 .pill-group {
@@ -529,7 +700,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 18px;
+  padding: 6px 16px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -542,21 +713,12 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-.pill-tab .el-icon {
-  color: #A1A1AA;
-  transition: color 0.2s ease;
-}
-
 .pill-tab:hover {
   color: #52525B;
 }
 
 .pill-tab.active {
   background: #18181B;
-  color: #FFFFFF;
-}
-
-.pill-tab.active .el-icon {
   color: #FFFFFF;
 }
 
@@ -567,7 +729,6 @@ onMounted(async () => {
   color: inherit;
   padding: 1px 6px;
   border-radius: 8px;
-  line-height: 1.5;
 }
 
 .pill-tab:not(.active) .pill-count {
@@ -575,27 +736,163 @@ onMounted(async () => {
   color: #71717A;
 }
 
-/* ── 内容区 ──────────────────────────── */
+/* ── 列表内容 ────────────────────────── */
 .tab-content {
-  padding: 20px 24px 24px;
-  min-height: 360px;
+  padding: 16px 20px 20px;
+  min-height: 300px;
 }
 
-/* ── 活动卡片网格 ────────────────────── */
-.event-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
+/* 列表项（卡片行） */
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border: 1px solid transparent;
 }
 
-.stagger-fade-in {
-  animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-  animation-fill-mode: both;
+.list-item:hover {
+  background: #FAFAFA;
+  border-color: var(--c-border-light);
 }
 
-@keyframes fadeInUp {
-  0%   { transform: translateY(12px); opacity: 0; }
-  100% { transform: translateY(0);    opacity: 1; }
+.list-item + .list-item {
+  border-top: 1px solid var(--c-border-light);
+}
+
+.item-cover {
+  width: 64px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.item-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-cover-icon {
+  opacity: 0.5;
+}
+
+.item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.item-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.item-status.status-open {
+  background: #FFF7ED;
+  color: #B45309;
+}
+
+.item-status.status-ongoing {
+  background: #ECFDF5;
+  color: #059669;
+}
+
+.item-status.status-ended {
+  background: #FAFAFA;
+  color: #A1A1AA;
+}
+
+.item-status.status-closed {
+  background: #F4F4F5;
+  color: #71717A;
+}
+
+.item-status.status-cancelled {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+.item-category {
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+
+.item-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.item-meta-text {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.item-info {
+  margin-top: 4px;
+}
+
+.item-people {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+/* 快速操作按钮 */
+.item-actions {
+  flex-shrink: 0;
+}
+
+.item-action-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-text-light);
+  background: transparent;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-base);
+  transition: all 0.2s ease;
+}
+
+.item-action-btn:hover {
+  border-color: var(--c-text-muted);
+  color: var(--c-text);
+}
+
+.item-action-danger:hover {
+  border-color: #FCA5A5;
+  color: #EF4444;
 }
 
 /* ── 空状态 ──────────────────────────── */
@@ -610,20 +907,20 @@ onMounted(async () => {
 
 .empty-icon {
   color: #D4D4D8;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .empty-text {
   font-size: 15px;
   font-weight: 500;
   color: #71717A;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .empty-hint {
   font-size: 13px;
   color: #A1A1AA;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .empty-action {
@@ -647,20 +944,9 @@ onMounted(async () => {
   background: #D97742;
 }
 
-/* ── 列表过渡 ────────────────────────── */
-.card-list-enter-active,
-.card-list-leave-active {
-  transition: all 0.3s ease;
-}
-.card-list-enter-from,
-.card-list-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
-}
-
-/* ================================================
+/* ════════════════════════════════════════
    响应式
-   ================================================ */
+   ════════════════════════════════════════ */
 @media (max-width: 768px) {
   .hero-content {
     flex-direction: column;
@@ -674,7 +960,11 @@ onMounted(async () => {
   }
 
   .username-display {
-    font-size: 22px;
+    font-size: 20px;
+  }
+
+  .stats-row {
+    margin-left: 0;
   }
 
   .profile-body {
@@ -686,8 +976,27 @@ onMounted(async () => {
     width: 100%;
   }
 
-  .event-grid {
-    grid-template-columns: 1fr;
+  /* 移动端列表项改为纵向布局，操作按钮放到底部 */
+  .list-item {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 10px;
+  }
+
+  .item-body {
+    flex-basis: calc(100% - 76px);
+  }
+
+  .item-actions {
+    flex-basis: 100%;
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 4px;
+  }
+
+  .item-action-btn {
+    font-size: 11px;
+    padding: 4px 10px;
   }
 }
 </style>

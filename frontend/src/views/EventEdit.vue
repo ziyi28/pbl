@@ -1,90 +1,167 @@
 <template>
   <div class="edit-page">
     <div class="page-header">
-      <el-page-header @back="$router.back()">
-        <template #content><span class="header-title">编辑活动</span></template>
-      </el-page-header>
-      <p class="header-subtitle fade-in-up">修改活动信息，确保参与者获取最新动态</p>
+      <button class="back-link" @click="$router.back()">
+        <el-icon :size="16"><ArrowLeft /></el-icon>
+        <span>返回</span>
+      </button>
+      <h1 class="page-title">编辑活动</h1>
     </div>
 
-    <div class="form-glass-card glass-effect fade-in-up" style="animation-delay: 0.1s" v-loading="loading">
-      <el-form :model="form" :rules="rules" ref="formRef" label-position="top" v-if="loaded" class="custom-form">
-        <el-row :gutter="24">
-          <el-col :span="24">
+    <!-- 当前状态条 -->
+    <div class="status-bar" v-if="loaded">
+      <div class="status-item">
+        <span class="status-label">当前状态</span>
+        <span class="status-value" :class="statusClass">{{ StatusLabels[eventStatus] || eventStatus }}</span>
+      </div>
+      <div class="status-divider" />
+      <div class="status-item">
+        <span class="status-label">已报名</span>
+        <span class="status-value">{{ currentParticipants }} 人</span>
+      </div>
+      <div class="status-divider" />
+      <div class="status-item">
+        <span class="status-label">人数上限</span>
+        <span class="status-value">{{ form.maxParticipants }} 人</span>
+      </div>
+    </div>
+
+    <div class="form-body" v-loading="loading">
+      <template v-if="loaded">
+        <!-- ═══ 基础信息 ═══ -->
+        <section class="form-section">
+          <h2 class="section-title">基础信息</h2>
+          <el-form :model="form" :rules="rules" ref="formRef" label-position="top">
             <el-form-item label="活动标题" prop="title">
-              <el-input v-model="form.title" placeholder="请输入活动标题" class="custom-input" />
+              <el-input v-model="form.title" placeholder="活动标题" maxlength="100" show-word-limit />
             </el-form-item>
-          </el-col>
-          
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="活动分类" prop="category">
-              <el-select v-model="form.category" placeholder="请选择分类" class="custom-select" style="width: 100%">
-                <el-option label="讲座" value="LECTURE" />
-                <el-option label="文体" value="SPORTS" />
-                <el-option label="社团" value="CLUB" />
-                <el-option label="志愿" value="VOLUNTEER" />
-                <el-option label="其他" value="OTHER" />
-              </el-select>
-            </el-form-item>
-          </el-col>
+            <el-row :gutter="16">
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="活动分类" prop="category">
+                  <el-select v-model="form.category" placeholder="选择分类" style="width: 100%">
+                    <el-option label="讲座" value="LECTURE" />
+                    <el-option label="文体" value="SPORTS" />
+                    <el-option label="社团" value="CLUB" />
+                    <el-option label="志愿" value="VOLUNTEER" />
+                    <el-option label="其他" value="OTHER" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="活动地点" prop="location">
+                  <el-input v-model="form.location" placeholder="活动地点" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </section>
 
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="活动地点" prop="location">
-              <el-input v-model="form.location" placeholder="请输入活动地点" class="custom-input" />
-            </el-form-item>
-          </el-col>
+        <!-- ═══ 时间规则 ═══ -->
+        <section class="form-section">
+          <h2 class="section-title">时间规则</h2>
+          <el-form :model="form" ref="formRef2" label-position="top">
+            <el-row :gutter="16">
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="开始时间">
+                  <el-date-picker v-model="form.startTime" type="datetime" placeholder="开始时间" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="结束时间">
+                  <el-date-picker v-model="form.endTime" type="datetime" placeholder="结束时间" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="报名截止时间">
+                  <el-date-picker v-model="form.registrationDeadline" type="datetime" placeholder="报名截止时间" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="人数上限">
+                  <el-input-number
+                    v-model="form.maxParticipants"
+                    :min="currentParticipants"
+                    :max="9999"
+                    style="width: 100%"
+                  />
+                  <span class="field-hint">不能小于当前报名人数（{{ currentParticipants }}）</span>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </section>
 
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="开始时间" prop="startTime">
-              <el-date-picker v-model="form.startTime" type="datetime" placeholder="选择开始时间" class="custom-date" style="width: 100%" />
+        <!-- ═══ 封面与详情 ═══ -->
+        <section class="form-section">
+          <h2 class="section-title">封面与详情</h2>
+          <el-form :model="form" label-position="top">
+            <el-form-item label="封面图片">
+              <div class="cover-upload-area">
+                <div class="cover-upload-left">
+                  <div v-if="coverPreview" class="cover-preview">
+                    <img :src="coverPreview" alt="封面预览" />
+                    <button class="cover-remove" @click="removeCover">✕</button>
+                  </div>
+                  <div v-else class="cover-placeholder" @click="triggerUpload">
+                    <el-icon :size="28"><Plus /></el-icon>
+                    <span>上传封面</span>
+                    <span class="cover-hint">JPG/PNG/WebP，≤2MB</span>
+                  </div>
+                  <input
+                    ref="coverInput"
+                    type="file"
+                    accept="image/*"
+                    style="display: none"
+                    @change="handleCoverUpload"
+                  />
+                  <span v-if="coverUploading" class="uploading-text">
+                    <el-icon class="is-loading" :size="14"><Loading /></el-icon>
+                    上传中…
+                  </span>
+                </div>
+                <div class="cover-upload-right">
+                  <span class="cover-or">或</span>
+                  <el-input v-model="form.coverImage" placeholder="手动输入封面图片 URL" />
+                </div>
+              </div>
             </el-form-item>
-          </el-col>
 
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="结束时间" prop="endTime">
-              <el-date-picker v-model="form.endTime" type="datetime" placeholder="选择结束时间" class="custom-date" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="报名截止" prop="registrationDeadline">
-              <el-date-picker v-model="form.registrationDeadline" type="datetime" placeholder="选择报名截止时间" class="custom-date" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="活动人数上限" prop="maxParticipants">
-              <el-input-number v-model="form.maxParticipants" :min="1" :max="99999" class="custom-input-number" />
-            </el-form-item>
-          </el-col>
-
-          <el-col :span="24">
-            <el-form-item label="封面图片链接">
-              <el-input v-model="form.coverImage" placeholder="请输入封面图片的 URL（可选）" class="custom-input" />
-            </el-form-item>
-          </el-col>
-
-          <el-col :span="24">
             <el-form-item label="活动描述" prop="description">
-              <el-input v-model="form.description" type="textarea" :rows="6" placeholder="详细描述活动的内容与亮点..." class="custom-textarea" />
+              <el-input
+                v-model="form.description"
+                type="textarea"
+                :rows="6"
+                placeholder="详细描述活动内容…"
+                maxlength="5000"
+                show-word-limit
+              />
             </el-form-item>
-          </el-col>
-        </el-row>
+          </el-form>
+        </section>
 
+        <!-- ═══ 操作按钮 ═══ -->
         <div class="form-actions">
-          <el-button type="primary" :loading="submitting" @click="handleSubmit" class="submit-btn" size="large">保存修改</el-button>
-          <el-button @click="$router.back()" class="cancel-btn" size="large">取消</el-button>
+          <button class="submit-btn" :disabled="submitting" @click="handleSubmit">
+            <el-icon v-if="submitting" class="is-loading" :size="16"><Loading /></el-icon>
+            <span>{{ submitting ? '保存中…' : '保存修改' }}</span>
+          </button>
+          <button class="cancel-btn" @click="$router.back()">取消</button>
         </div>
-      </el-form>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, type FormInstance } from 'element-plus'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { ArrowLeft, Plus, Loading } from '@element-plus/icons-vue'
 import { getEvent, updateEvent } from '../api/event'
+import { uploadFile, validateImageFile } from '../api/upload'
+import { StatusLabels, getStatusClass, toLocalDateTimeString } from '../utils/eventUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -93,20 +170,27 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const submitting = ref(false)
 const loaded = ref(false)
+const coverUploading = ref(false)
+const coverInput = ref<HTMLInputElement | null>(null)
+const coverPreview = ref('')
+const eventStatus = ref('')
+const currentParticipants = ref(0)
 
 const form = reactive({
   title: '',
   description: '',
-  category: '',
+  category: '' as string,
   location: '',
-  startTime: '',
-  endTime: '',
-  registrationDeadline: '',
+  startTime: '' as string | Date,
+  endTime: '' as string | Date,
+  registrationDeadline: '' as string | Date,
   maxParticipants: 0,
   coverImage: '',
 })
 
-const rules = {
+const statusClass = computed(() => getStatusClass({ status: eventStatus.value } as any))
+
+const rules: FormRules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   description: [{ required: true, message: '请输入描述', trigger: 'blur' }],
   category: [{ required: true, message: '请选择分类', trigger: 'change' }],
@@ -117,16 +201,20 @@ async function loadEvent() {
   loading.value = true
   try {
     const res = await getEvent(eventId)
+    const e = res.data
+    eventStatus.value = e.status
+    currentParticipants.value = e.currentParticipants
+    coverPreview.value = e.coverImage || ''
     Object.assign(form, {
-      title: res.data.title,
-      description: res.data.description,
-      category: res.data.category,
-      location: res.data.location,
-      startTime: res.data.startTime,
-      endTime: res.data.endTime,
-      registrationDeadline: res.data.registrationDeadline,
-      maxParticipants: res.data.maxParticipants,
-      coverImage: res.data.coverImage || '',
+      title: e.title,
+      description: e.description,
+      category: e.category,
+      location: e.location,
+      startTime: e.startTime,
+      endTime: e.endTime,
+      registrationDeadline: e.registrationDeadline,
+      maxParticipants: e.maxParticipants,
+      coverImage: e.coverImage || '',
     })
     loaded.value = true
   } finally {
@@ -134,13 +222,80 @@ async function loadEvent() {
   }
 }
 
+function triggerUpload() {
+  coverInput.value?.click()
+}
+
+async function handleCoverUpload(e: Event) {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  const msg = validateImageFile(file)
+  if (msg) {
+    ElMessage.error(msg)
+    target.value = ''
+    return
+  }
+
+  coverUploading.value = true
+  try {
+    const res = await uploadFile(file)
+    form.coverImage = res.data
+    coverPreview.value = res.data
+    ElMessage.success('封面上传成功')
+  } catch {
+    ElMessage.error('上传失败')
+  } finally {
+    coverUploading.value = false
+    target.value = ''
+  }
+}
+
+function removeCover() {
+  coverPreview.value = ''
+  form.coverImage = ''
+}
+
 async function handleSubmit() {
-  await formRef.value?.validate()
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  // 前端时间校验
+  const start = new Date(form.startTime)
+  const end = new Date(form.endTime)
+  const deadline = new Date(form.registrationDeadline)
+
+  if (end <= start) {
+    ElMessage.error('结束时间必须晚于开始时间')
+    return
+  }
+  if (deadline >= start) {
+    ElMessage.error('报名截止时间必须早于开始时间')
+    return
+  }
+  if (form.maxParticipants < currentParticipants.value) {
+    ElMessage.error(`人数上限不能小于当前报名人数（${currentParticipants.value}）`)
+    return
+  }
+
   submitting.value = true
   try {
-    await updateEvent(eventId, form as any)
+    await updateEvent(eventId, {
+      title: form.title,
+      description: form.description,
+      category: form.category as any,
+      location: form.location,
+      startTime: toLocalDateTimeString(form.startTime),
+      endTime: toLocalDateTimeString(form.endTime),
+      registrationDeadline: toLocalDateTimeString(form.registrationDeadline),
+      maxParticipants: form.maxParticipants,
+      coverImage: form.coverImage || undefined,
+    })
     ElMessage.success('活动更新成功')
     router.push(`/events/${eventId}`)
+  } catch {
+    /* interceptor handles */
   } finally {
     submitting.value = false
   }
@@ -151,111 +306,281 @@ onMounted(() => loadEvent())
 
 <style scoped>
 .edit-page {
-  max-width: 900px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 20px 0 60px;
 }
 
 .page-header {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
-.header-title {
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 8px;
+  font-family: var(--font-base);
+}
+
+.back-link:hover {
+  color: var(--c-text);
+}
+
+.page-title {
   font-size: 24px;
   font-weight: 700;
-  font-family: var(--font-heading);
-  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-secondary-light) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--c-text);
 }
 
-.header-subtitle {
-  color: var(--c-text-light);
-  font-size: 15px;
-  margin-top: 12px;
-  margin-left: 40px; /* Aligned with title considering page-header back icon */
+/* ── 状态栏 ──────────────────────────── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 20px;
+  background: #FAFAFA;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
-.form-glass-card {
-  padding: 40px;
-  border-radius: var(--radius-xl);
+.status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-:deep(.custom-input .el-input__wrapper),
-:deep(.custom-select .el-input__wrapper),
-:deep(.custom-date .el-input__wrapper),
-:deep(.custom-textarea .el-textarea__inner) {
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: var(--radius-md) !important;
-  box-shadow: none !important;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+.status-label {
+  font-size: 11px;
+  color: var(--c-text-muted);
 }
 
-:deep(.custom-input .el-input__wrapper.is-focus),
-:deep(.custom-select .el-input__wrapper.is-focus),
-:deep(.custom-date .el-input__wrapper.is-focus),
-:deep(.custom-textarea .el-textarea__inner:focus) {
-  background: #fff;
-  border-color: var(--c-primary-light);
-  box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1) !important;
-}
-
-:deep(.custom-input-number .el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: var(--radius-md) !important;
-}
-
-:deep(.el-form-item__label) {
+.status-value {
+  font-size: 14px;
   font-weight: 600;
   color: var(--c-text);
-  margin-bottom: 8px !important;
 }
 
+.status-value.status-open { color: #B45309; }
+.status-value.status-ongoing { color: #059669; }
+.status-value.status-ended { color: #A1A1AA; }
+.status-value.status-closed { color: #71717A; }
+.status-value.status-cancelled { color: #DC2626; }
+
+.status-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--c-border);
+}
+
+/* ── 表单分区 ────────────────────────── */
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-section {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-sm);
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text);
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--c-border-light);
+}
+
+.field-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--c-text-muted);
+  margin-top: 4px;
+}
+
+/* ── 封面上传 ────────────────────────── */
+.cover-upload-area {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.cover-upload-left {
+  flex-shrink: 0;
+}
+
+.cover-preview {
+  position: relative;
+  width: 240px;
+  height: 140px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+}
+
+.cover-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #FFF;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cover-placeholder {
+  width: 240px;
+  height: 140px;
+  border: 2px dashed var(--c-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--c-text-muted);
+  font-size: 13px;
+  transition: border-color 0.2s ease;
+}
+
+.cover-placeholder:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+}
+
+.cover-hint {
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.uploading-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+  margin-top: 6px;
+}
+
+.cover-upload-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cover-or {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+/* ── 操作按钮 ────────────────────────── */
 .form-actions {
   display: flex;
-  gap: 16px;
-  margin-top: 40px;
-  padding-top: 24px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  gap: 12px;
+  padding-top: 8px;
 }
 
 .submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   flex: 1;
-  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-light) 100%) !important;
-  border: none !important;
+  height: 44px;
+  padding: 0 24px;
+  font-size: 15px;
   font-weight: 600;
-  font-size: 16px;
-  border-radius: var(--radius-md) !important;
+  color: #FFFFFF;
+  background: #B45309;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-base);
+  transition: background 0.2s ease;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #D97742;
+}
+
+.submit-btn:disabled {
+  background: #D4D4D8;
+  cursor: not-allowed;
 }
 
 .cancel-btn {
-  flex: 1;
-  font-weight: 600;
-  font-size: 16px;
-  border-radius: var(--radius-md) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--c-text-light);
+  background: transparent;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-base);
+  transition: all 0.2s ease;
 }
 
-.fade-in-up {
-  animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-  animation-fill-mode: both;
+.cancel-btn:hover {
+  border-color: var(--c-text-muted);
+  color: var(--c-text);
 }
 
-@keyframes fadeInUp {
-  0% { transform: translateY(20px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-
-@media (max-width: 768px) {
-  .form-glass-card {
-    padding: 24px;
+/* ── 响应式 ──────────────────────────── */
+@media (max-width: 640px) {
+  .form-section {
+    padding: 18px 16px;
   }
+
+  .cover-upload-area {
+    flex-direction: column;
+  }
+
+  .cover-placeholder,
+  .cover-preview {
+    width: 100%;
+  }
+
   .form-actions {
     flex-direction: column;
   }
-  .header-subtitle {
-    margin-left: 0;
+
+  .status-bar {
+    gap: 12px;
   }
 }
 </style>
