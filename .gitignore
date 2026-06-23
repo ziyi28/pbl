@@ -33,3 +33,4 @@ backend/src/main/resources/db/init_demo_data.sql
 # === Design & Development Docs ===
 DEVELOPMENT_GUIDE.md
 PRD.md
+开发周期跟踪表.csv
