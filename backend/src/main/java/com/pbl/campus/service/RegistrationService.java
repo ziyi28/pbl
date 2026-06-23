@@ -222,7 +222,7 @@ public class RegistrationService {
                     user.getId(),
                     escapeCsv(user.getUsername()),
                     user.getEmail() != null ? escapeCsv(user.getEmail()) : "",
-                    reg.getCreatedAt() != null ? reg.getCreatedAt().format(formatter) : "");
+                    reg.getCreatedAt() != null ? "\t" + reg.getCreatedAt().format(formatter) : "");
         }
         writer.flush();
     }
