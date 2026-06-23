@@ -14,7 +14,7 @@ public class SwaggerConfig {
 
     @Bean
     public OpenAPI customOpenAPI() {
-        final String securitySchemeName = "Bearer Authentication";
+        final String securitySchemeName = "Authorization";
         return new OpenAPI()
                 .info(new Info()
                         .title("校园活动发布平台 API")
@@ -30,7 +30,7 @@ public class SwaggerConfig {
                 .components(new io.swagger.v3.oas.models.Components()
                         .addSecuritySchemes(securitySchemeName,
                                 new SecurityScheme()
-                                        .name(securitySchemeName)
+                                        .name("Authorization")
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")));
