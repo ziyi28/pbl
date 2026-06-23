@@ -1,5 +1,6 @@
 package com.pbl.campus.config;
 
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
@@ -14,7 +15,7 @@ public class SwaggerConfig {
 
     @Bean
     public OpenAPI customOpenAPI() {
-        final String securitySchemeName = "Bearer Authentication";
+        final String securitySchemeName = "Authorization";
         return new OpenAPI()
                 .info(new Info()
                         .title("校园活动发布平台 API")
@@ -27,7 +28,7 @@ public class SwaggerConfig {
                                 .name("MIT License")
                                 .url("https://opensource.org/licenses/MIT")))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
-                .components(new io.swagger.v3.oas.models.Components()
+                .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
                                 new SecurityScheme()
                                         .name(securitySchemeName)
